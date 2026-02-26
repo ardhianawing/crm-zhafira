@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\PushNotificationService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class WebhookController extends Controller
 {
@@ -210,6 +211,25 @@ class WebhookController extends Controller
                 } catch (\Exception $e) {
                     \Log::error('Telegram notification failed: ' . $e->getMessage());
                 }
+            }
+        }
+
+        // Kirim ke Google Sheets
+        $sheetsUrl = config('app.google_sheets_url');
+        if ($sheetsUrl) {
+            try {
+                Http::timeout(5)->post($sheetsUrl, [
+                    'tanggal'   => now()->timezone('Asia/Jakarta')->format('d/m/Y H:i'),
+                    'nama'      => $request->nama,
+                    'no_hp'     => $phone,
+                    'pesan'     => $request->pesan ?? '',
+                    'status'    => 'New',
+                    'marketing' => $nextMarketing?->nama_lengkap ?? 'Belum di-assign',
+                    'sumber'    => 'WhatsApp',
+                    'crm_id'    => $lead->id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Google Sheets sync failed: ' . $e->getMessage());
             }
         }
 

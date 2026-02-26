@@ -139,4 +139,12 @@ return [
 
     'telegram_bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Sheets Apps Script URL
+    |--------------------------------------------------------------------------
+    */
+
+    'google_sheets_url' => env('GOOGLE_SHEETS_URL', ''),
+
 ];
