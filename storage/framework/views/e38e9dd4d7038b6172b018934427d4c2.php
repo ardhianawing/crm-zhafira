@@ -1,0 +1,151 @@
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background-color: #0f3d2e;">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="<?php echo e(auth()->user()->isAdmin() ? route('admin.dashboard') : route('marketing.dashboard')); ?>" style="color: #fff;">
+            <span style="color: #c9a227;">Zhafira</span> CRM
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <?php if(auth()->guard()->check()): ?>
+                <?php if(auth()->user()->isAdmin()): ?>
+                    
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.dashboard') ? 'active' : ''); ?>" href="<?php echo e(route('admin.dashboard')); ?>">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.leads.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.leads.index')); ?>">
+                                <i class="bi bi-people"></i> Leads
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.assignment.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.assignment.index')); ?>">
+                                <i class="bi bi-person-plus"></i> Distribusi Lead
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.news.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.news.index')); ?>">
+                                <i class="bi bi-newspaper"></i> News
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.users.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.users.index')); ?>">
+                                <i class="bi bi-person-gear"></i> Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('admin.whatsapp-templates.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.whatsapp-templates.index')); ?>">
+                                <i class="bi bi-whatsapp"></i> WA Template
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://docs.google.com/spreadsheets/d/1iiO70Pr4uqcPb5-o1cSE8ufXRcDYuRz-VgSKatIQS4A/edit" target="_blank">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Spreadsheet
+                            </a>
+                        </li>
+                    </ul>
+                <?php else: ?>
+                    
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('marketing.dashboard') ? 'active' : ''); ?>" href="<?php echo e(route('marketing.dashboard')); ?>">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('marketing.leads.*') ? 'active' : ''); ?>" href="<?php echo e(route('marketing.leads.index')); ?>">
+                                <i class="bi bi-people"></i> Leads Saya
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('marketing.tasks.*') ? 'active' : ''); ?>" href="<?php echo e(route('marketing.tasks.today')); ?>">
+                                <i class="bi bi-calendar-check"></i> Tugas Hari Ini
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('marketing.news.*') ? 'active' : ''); ?>" href="<?php echo e(route('marketing.news.index')); ?>">
+                                <i class="bi bi-newspaper"></i> News
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo e(request()->routeIs('marketing.tools') ? 'active' : ''); ?>" href="<?php echo e(route('marketing.tools')); ?>">
+                                <i class="bi bi-tools"></i> Tools
+                            </a>
+                        </li>
+                    </ul>
+                <?php endif; ?>
+
+                <ul class="navbar-nav">
+                    
+                    <li class="nav-item" id="installBtnAuto" style="display: none;">
+                        <a class="nav-link" href="#" onclick="installPWA(); return false;" title="Install Aplikasi">
+                            <i class="bi bi-download"></i> <span class="d-lg-none">Install App</span>
+                        </a>
+                    </li>
+
+                    
+                    <?php if(!auth()->user()->isAdmin()): ?>
+                    <li class="nav-item" id="installBtnManual">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#installInstructionModal" title="Install Aplikasi">
+                            <i class="bi bi-phone"></i> <span class="d-lg-none">Install App</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
+
+                    
+                    <?php if(!auth()->user()->isAdmin()): ?>
+                    <?php
+                        $overdueCount = \App\Models\Lead::where('assigned_to', auth()->id())
+                            ->whereNotNull('tgl_next_followup')
+                            ->where('tgl_next_followup', '<=', now()->toDateString())
+                            ->whereNotIn('status_prospek', ['Deal', 'Loss'])
+                            ->count();
+                    ?>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="<?php echo e(route('marketing.tasks.today')); ?>" title="Tugas Follow-up">
+                            <div class="position-relative">
+                                <i class="bi bi-bell<?php echo e($overdueCount > 0 ? '-fill' : ''); ?> fs-5"></i>
+                                <?php if($overdueCount > 0): ?>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; padding: 0.25rem 0.4rem;">
+                                    <?php echo e($overdueCount > 9 ? '9+' : $overdueCount); ?>
+
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                            <span class="d-lg-none ms-3">Notifikasi</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> <?php echo e(auth()->user()->nama_lengkap); ?>
+
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li>
+                                <span class="dropdown-item-text text-muted">
+                                    <small><?php echo e(ucfirst(auth()->user()->role)); ?></small>
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="<?php echo e(route('logout')); ?>" method="POST">
+                                    <?php echo csrf_field(); ?>
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </div>
+</nav><?php /**PATH /home/u861895257/domains/crm.zhafiravila.com/public_html/resources/views/layouts/partials/navbar.blade.php ENDPATH**/ ?>
