@@ -250,4 +250,39 @@ class WebhookController extends Controller
             'data' => $marketings
         ]);
     }
+
+    // Handle Telegram Bot webhook (auto-reply)
+    public function handleTelegram(Request $request)
+    {
+        $message = $request->input('message');
+        if (!$message) {
+            return response()->json(['ok' => true]);
+        }
+
+        $chatId = $message['chat']['id'] ?? null;
+        $text = trim($message['text'] ?? '');
+        $firstName = $message['from']['first_name'] ?? '';
+
+        if (!$chatId) {
+            return response()->json(['ok' => true]);
+        }
+
+        if ($text === '/start') {
+            $reply = "Halo {$firstName}! 👋\n\n"
+                . "Saya bot notifikasi <b>Zhafira CRM</b>.\n\n"
+                . "Kamu akan menerima notifikasi otomatis ketika ada lead baru yang di-assign ke kamu.\n\n"
+                . "📌 <b>Chat ID kamu:</b> <code>{$chatId}</code>\n"
+                . "Berikan ID ini ke admin untuk diinput di CRM.";
+        } elseif ($text === '/id') {
+            $reply = "📌 <b>Chat ID kamu:</b> <code>{$chatId}</code>";
+        } else {
+            $reply = "Saya bot notifikasi otomatis.\n"
+                . "Ketik /start untuk info, atau /id untuk melihat Chat ID kamu.";
+        }
+
+        $telegram = new TelegramService();
+        $telegram->sendMessage((string)$chatId, $reply);
+
+        return response()->json(['ok' => true]);
+    }
 }

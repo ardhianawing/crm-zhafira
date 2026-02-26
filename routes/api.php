@@ -24,3 +24,7 @@ Route::post('/webhook/whatsapp', [WebhookController::class, 'handleWhatsApp'])
 // Get marketing numbers for WA Bot
 Route::post('/webhook/marketing-numbers', [WebhookController::class, 'getMarketingNumbers'])
     ->name('webhook.marketing-numbers');
+
+// Telegram Bot Webhook (auto-reply)
+Route::post('/webhook/telegram', [WebhookController::class, 'handleTelegram'])
+    ->name('webhook.telegram');
