@@ -160,7 +160,7 @@ class WebhookController extends Controller
         }
 
         $lead = Lead::create([
-            'nama_customer' => $request->nama,
+            'nama_customer' => $request->nama ?: 'Lead WhatsApp',
             'no_hp' => $phone,
             'status_prospek' => 'New',
             'sumber_lead' => 'WhatsApp',

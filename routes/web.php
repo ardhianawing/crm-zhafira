@@ -15,6 +15,32 @@ use App\Http\Controllers\Marketing\NewsController as MarketingNewsController;
 use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
+// Privacy Policy (required by Meta)
+Route::get('/privacy-policy', function () {
+    return response(
+        '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">'
+        . '<meta property="og:title" content="Privacy Policy - Zhafira Villa">'
+        . '<meta property="og:description" content="Kebijakan Privasi Zhafira Villa">'
+        . '<meta property="og:type" content="website">'
+        . '<meta property="og:url" content="https://crm.zhafiravila.com/privacy-policy">'
+        . '<title>Privacy Policy - Zhafira Villa</title></head>'
+        . '<body style="font-family:sans-serif;max-width:700px;margin:40px auto;padding:0 20px">'
+        . '<h1>Privacy Policy</h1>'
+        . '<p><strong>Zhafira Villa</strong></p>'
+        . '<p>Zhafira Villa menghormati privasi Anda. Data yang kami kumpulkan melalui WhatsApp (nama dan nomor telepon) hanya digunakan untuk keperluan komunikasi dan layanan kami.</p>'
+        . '<p>Kami tidak akan membagikan data Anda kepada pihak ketiga tanpa persetujuan Anda.</p>'
+        . '<h2>Data yang Dikumpulkan</h2>'
+        . '<ul><li>Nama</li><li>Nomor WhatsApp</li><li>Pesan yang dikirim</li></ul>'
+        . '<h2>Penggunaan Data</h2>'
+        . '<p>Data digunakan semata-mata untuk merespons pertanyaan Anda dan memberikan layanan terbaik.</p>'
+        . '<h2>Kontak</h2>'
+        . '<p>Email: zhafira.office@gmail.com</p>'
+        . '<p><small>Terakhir diperbarui: Februari 2026</small></p>'
+        . '</body></html>',
+        200
+    )->header('Content-Type', 'text/html');
+})->name('privacy-policy');
+
 // Redirect root
 Route::get('/', function () {
     if (auth()->check()) {

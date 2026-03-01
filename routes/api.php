@@ -28,3 +28,4 @@ Route::post('/webhook/marketing-numbers', [WebhookController::class, 'getMarketi
 // Telegram Bot Webhook (auto-reply)
 Route::post('/webhook/telegram', [WebhookController::class, 'handleTelegram'])
     ->name('webhook.telegram');
+
