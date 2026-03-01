@@ -147,6 +147,6 @@ return [
 
     'google_sheets_url' => env('GOOGLE_SHEETS_URL', ''),
 
-    'wa_bot_url' => env('WA_BOT_URL', 'http://202.10.47.91:3001'),
+    'wa_bot_url' => env('WA_BOT_URL', 'http://202.10.47.91'),
 
 ];
