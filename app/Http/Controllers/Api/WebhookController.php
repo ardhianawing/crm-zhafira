@@ -55,7 +55,7 @@ class WebhookController extends Controller
 
         // Kirim notifikasi ke marketing yang di-assign
         $waNotifSent = false;
-        $telegramSent = false;
+
         if ($assignedTo && $nextMarketing) {
             // WA notification (utama)
             if ($nextMarketing->no_hp) {
@@ -69,21 +69,6 @@ class WebhookController extends Controller
                     );
                 } catch (\Exception $e) {
                     \Log::error('WA notification failed: ' . $e->getMessage());
-                }
-            }
-
-            // Telegram notification (backup)
-            if ($nextMarketing->telegram_chat_id) {
-                try {
-                    $telegram = new TelegramService();
-                    $telegramSent = $telegram->notifyNewLead(
-                        $nextMarketing->telegram_chat_id,
-                        $request->nama,
-                        $request->nomor,
-                        $request->keterangan
-                    );
-                } catch (\Exception $e) {
-                    \Log::error('Telegram notification failed: ' . $e->getMessage());
                 }
             }
 
@@ -109,7 +94,6 @@ class WebhookController extends Controller
             'action' => 'created',
             'assigned_to' => $assignedName,
             'wa_notif_sent' => $waNotifSent,
-            'telegram_sent' => $telegramSent,
         ]);
     }
 
@@ -223,7 +207,6 @@ class WebhookController extends Controller
 
         // Kirim notifikasi ke marketing yang di-assign
         $waNotifSent = false;
-        $telegramSent = false;
         if ($assignedTo && $nextMarketing) {
             // WA notification (utama)
             if ($nextMarketing->no_hp) {
@@ -237,21 +220,6 @@ class WebhookController extends Controller
                     );
                 } catch (\Exception $e) {
                     \Log::error('WA notification failed: ' . $e->getMessage());
-                }
-            }
-
-            // Telegram notification (backup)
-            if ($nextMarketing->telegram_chat_id) {
-                try {
-                    $telegram = new TelegramService();
-                    $telegramSent = $telegram->notifyNewLead(
-                        $nextMarketing->telegram_chat_id,
-                        $request->nama,
-                        $phone,
-                        $request->pesan
-                    );
-                } catch (\Exception $e) {
-                    \Log::error('Telegram notification failed: ' . $e->getMessage());
                 }
             }
 
@@ -297,7 +265,6 @@ class WebhookController extends Controller
             'action'         => 'created',
             'crm_id'         => $lead->id,
             'wa_notif_sent'  => $waNotifSent,
-            'telegram_sent'  => $telegramSent,
         ];
 
         if ($nextMarketing) {
