@@ -77,6 +77,9 @@ Route::prefix('admin')
         // Fitur Update Status Cepat
         Route::patch('/leads/{lead}/update-status', [AdminLeadController::class, 'updateStatus'])->name('leads.update-status');
         
+        Route::get('/leads/bulk-upload', [AdminLeadController::class, 'bulkUpload'])->name('leads.bulk-upload');
+        Route::post('/leads/bulk-upload', [AdminLeadController::class, 'bulkUploadProcess'])->name('leads.bulk-upload.process');
+        Route::get('/leads/bulk-upload/template', [AdminLeadController::class, 'downloadTemplate'])->name('leads.bulk-upload.template');
         Route::resource('leads', AdminLeadController::class);
         Route::get('/leads/{lead}/history', [AdminLeadController::class, 'history'])->name('leads.history');
         Route::get('/assignment', [LeadAssignmentController::class, 'index'])->name('assignment.index');

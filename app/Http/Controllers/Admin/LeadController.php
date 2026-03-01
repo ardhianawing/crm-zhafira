@@ -7,12 +7,14 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Enums\StatusProspek;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LeadController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = (int) $request->input('per_page', 50);
+        $perPage = min((int) $request->input('per_page', 50), 1000);
         
         $leads = Lead::with('assignedUser')
             ->when($request->search, function($query, $search) {
@@ -131,5 +133,140 @@ class LeadController extends Controller
         ]);
 
         return back()->with('success', 'Status lead berhasil diupdate.');
+    }
+
+    public function bulkUpload()
+    {
+        return view('admin.leads.bulk-upload');
+    }
+
+    public function bulkUploadProcess(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:2048',
+        ]);
+
+        $rows = Excel::toArray(null, $request->file('file'))[0];
+
+        if (empty($rows)) {
+            return back()->with('error', 'File kosong atau format tidak valid.');
+        }
+
+        // Detect headers
+        $headers = array_map(fn($h) => strtolower(trim($h ?? '')), $rows[0]);
+        $namaCol = array_search('nama', $headers);
+        $hpCol = array_search('no_hp', $headers);
+        $statusCol = array_search('status', $headers);
+        $ketCol = array_search('keterangan', $headers);
+
+        if ($namaCol === false || $hpCol === false) {
+            return back()->with('error', 'Kolom "nama" dan "no_hp" wajib ada di file.');
+        }
+
+        $dataRows = array_slice($rows, 1); // skip header
+
+        if (count($dataRows) > 500) {
+            return back()->with('error', 'Maksimal 500 baris per upload. File ini memiliki ' . count($dataRows) . ' baris.');
+        }
+
+        $success = 0;
+        $duplicates = 0;
+        $failed = 0;
+        $failedRows = [];
+
+        foreach ($dataRows as $index => $row) {
+            $rowNum = $index + 2; // 1-based + header
+            $nama = trim($row[$namaCol] ?? '');
+            $noHp = trim((string) ($row[$hpCol] ?? ''));
+            $status = ($statusCol !== false) ? (trim($row[$statusCol] ?? '') ?: 'New') : 'New';
+            $keterangan = ($ketCol !== false) ? (trim($row[$ketCol] ?? '') ?: null) : null;
+
+            // Validasi
+            if (empty($nama) || empty($noHp)) {
+                $failed++;
+                $failedRows[] = ['row' => $rowNum, 'nama' => $nama, 'no_hp' => $noHp, 'reason' => 'Nama atau No HP kosong'];
+                continue;
+            }
+
+            if (mb_strlen($nama) > 100) {
+                $failed++;
+                $failedRows[] = ['row' => $rowNum, 'nama' => $nama, 'no_hp' => $noHp, 'reason' => 'Nama melebihi 100 karakter'];
+                continue;
+            }
+
+            if (strlen($noHp) > 20) {
+                $failed++;
+                $failedRows[] = ['row' => $rowNum, 'nama' => $nama, 'no_hp' => $noHp, 'reason' => 'No HP melebihi 20 karakter'];
+                continue;
+            }
+
+            // Validate status
+            $validStatuses = StatusProspek::values();
+            if (!in_array($status, $validStatuses)) {
+                $status = 'New';
+            }
+
+            // Normalisasi no HP
+            $phone = preg_replace('/[^0-9]/', '', $noHp);
+            if (str_starts_with($phone, '0')) {
+                $phone = '62' . substr($phone, 1);
+            } elseif (!str_starts_with($phone, '62')) {
+                $phone = '62' . $phone;
+            }
+
+            // Cek duplikat (multi-format, sama seperti webhook)
+            $exists = Lead::where('no_hp', $phone)
+                ->orWhere('no_hp', '0' . substr($phone, 2))
+                ->orWhere('no_hp', '+62' . substr($phone, 2))
+                ->orWhere('no_hp', $noHp)
+                ->exists();
+
+            if ($exists) {
+                $duplicates++;
+                continue;
+            }
+
+            $lead = Lead::create([
+                'nama_customer' => $nama,
+                'no_hp' => $phone,
+                'status_prospek' => $status,
+                'sumber_lead' => 'Bulk Upload',
+                'keterangan' => $keterangan,
+            ]);
+
+            $lead->histories()->create([
+                'user_id' => auth()->id(),
+                'action' => 'bulk_import',
+                'new_values' => $lead->toArray(),
+            ]);
+
+            $success++;
+        }
+
+        return back()->with('bulk_result', [
+            'success' => $success,
+            'duplicates' => $duplicates,
+            'failed' => $failed,
+            'failed_rows' => $failedRows,
+            'total' => count($dataRows),
+        ]);
+    }
+
+    public function downloadTemplate(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="template_bulk_upload_leads.csv"',
+        ];
+
+        return response()->stream(function () {
+            $handle = fopen('php://output', 'w');
+            // BOM for Excel UTF-8
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, ['nama', 'no_hp', 'status', 'keterangan']);
+            fputcsv($handle, ['John Doe', '081234567890', 'New', 'Dari pameran']);
+            fputcsv($handle, ['Jane Smith', '6289876543210', 'Warm', 'Referensi teman']);
+            fclose($handle);
+        }, 200, $headers);
     }
 }

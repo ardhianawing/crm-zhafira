@@ -12,7 +12,7 @@ class LeadAssignmentController extends Controller
     public function index(Request $request)
     {
         // Menangkap jumlah baris dari URL (?per_page=50)
-        $perPage = (int) $request->input('per_page', 50);
+        $perPage = min((int) $request->input('per_page', 50), 1000);
 
         $marketingUsers = User::where('role', 'marketing')
             ->where('is_active', true)
@@ -60,6 +60,7 @@ class LeadAssignmentController extends Controller
     {
         $request->validate([
             'lead_ids' => 'required|array',
+            'lead_ids.*' => 'integer|exists:leads,id',
             'marketing_id' => 'required|exists:users,id'
         ]);
 
@@ -76,6 +77,7 @@ class LeadAssignmentController extends Controller
     {
         $request->validate([
             'lead_ids' => 'required|array',
+            'lead_ids.*' => 'integer|exists:leads,id',
             'marketing_id' => 'required|exists:users,id'
         ]);
 
@@ -91,7 +93,8 @@ class LeadAssignmentController extends Controller
     public function deleteBulk(Request $request)
     {
         $request->validate([
-            'lead_ids' => 'required|array'
+            'lead_ids' => 'required|array',
+            'lead_ids.*' => 'integer|exists:leads,id',
         ]);
 
         Lead::whereIn('id', $request->lead_ids)->delete();

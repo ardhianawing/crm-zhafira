@@ -8,7 +8,10 @@
         <h4 class="mb-0 fw-bold"><i class="bi bi-people-fill" style="color: #0f3d2e;"></i> Database Leads</h4>
         <p class="text-muted mb-0">Total database: <b>{{ $leads->total() }}</b> baris data.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ route('admin.leads.bulk-upload') }}" class="btn btn-outline-success">
+            <i class="bi bi-cloud-arrow-up"></i> Bulk Upload
+        </a>
         <a href="{{ route('admin.leads.create') }}" class="btn" style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
             <i class="bi bi-plus-circle"></i> Tambah Lead
         </a>

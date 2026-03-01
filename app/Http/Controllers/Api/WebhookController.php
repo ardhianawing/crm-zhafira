@@ -274,6 +274,10 @@ class WebhookController extends Controller
     // Handle Telegram Bot webhook (auto-reply)
     public function handleTelegram(Request $request)
     {
+        if ($request->secret !== config('app.webhook_secret')) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
         $message = $request->input('message');
         if (!$message) {
             return response()->json(['ok' => true]);
