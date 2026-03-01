@@ -47,16 +47,29 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // 6. Leads by Status (untuk breakdown card)
+        $leadsByStatus = Lead::assignedTo($userId)
+            ->selectRaw('status_prospek, count(*) as total')
+            ->groupBy('status_prospek')
+            ->pluck('total', 'status_prospek')
+            ->toArray();
+
+        // 7. Conversion Rate
+        $dealCount = $leadsByStatus['Deal'] ?? 0;
+        $conversionRate = $totalLeads > 0 ? round(($dealCount / $totalLeads) * 100, 1) : 0;
+
         // Kirim semuanya dengan nama yang pas sesuai permintaan file Blade
         return view('marketing.dashboard', compact(
-            'totalLeads', 
-            'hotLeads', 
-            'todaysTasks', 
+            'totalLeads',
+            'hotLeads',
+            'todaysTasks',
             'overdueLeads',
-            'todayTasksCount', 
-            'todaysFollowups', 
-            'recentNews', // Nama ini sudah diperbaiki
-            'recentLeads'
+            'todayTasksCount',
+            'todaysFollowups',
+            'recentNews',
+            'recentLeads',
+            'leadsByStatus',
+            'conversionRate'
         ));
     }
 }

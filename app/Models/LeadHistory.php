@@ -45,6 +45,7 @@ class LeadHistory extends Model
             'transferred' => 'Lead ditransfer',
             'followup_completed' => 'Follow-up selesai',
             'status_changed' => 'Status berubah',
+            'rescheduled' => 'Jadwal diubah',
             default => $this->action,
         };
     }

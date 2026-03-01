@@ -55,12 +55,15 @@ class WebhookController extends Controller
         // Kirim push notification ke marketing yang di-assign
         if ($assignedTo && $nextMarketing) {
             try {
+                $pendingCount = Lead::where('assigned_to', $nextMarketing->id)
+                    ->where('fase_followup', 0)
+                    ->count();
                 $pushService = new PushNotificationService();
                 $pushService->sendToUser(
                     $nextMarketing,
-                    'Lead Baru dari Landing Page!',
-                    "Nama: {$request->nama}\nNo HP: {$request->nomor}",
-                    ['lead_id' => $lead->id, 'url' => '/marketing/leads/' . $lead->id]
+                    'Zhafira CRM',
+                    "Ada Lead Masuk {$pendingCount} 🔔",
+                    ['url' => '/marketing/tasks/today']
                 );
             } catch (\Exception $e) {
                 \Log::error('Push notification failed: ' . $e->getMessage());
@@ -187,12 +190,15 @@ class WebhookController extends Controller
         if ($assignedTo && $nextMarketing) {
             // Push notification (browser)
             try {
+                $pendingCount = Lead::where('assigned_to', $nextMarketing->id)
+                    ->where('fase_followup', 0)
+                    ->count();
                 $pushService = new PushNotificationService();
                 $pushService->sendToUser(
                     $nextMarketing,
-                    'Lead Baru dari WhatsApp!',
-                    "Nama: {$request->nama}\nNo HP: {$phone}",
-                    ['lead_id' => $lead->id, 'url' => '/marketing/leads/' . $lead->id]
+                    'Zhafira CRM',
+                    "Ada Lead Masuk {$pendingCount} 🔔",
+                    ['url' => '/marketing/tasks/today']
                 );
             } catch (\Exception $e) {
                 \Log::error('Push notification failed: ' . $e->getMessage());

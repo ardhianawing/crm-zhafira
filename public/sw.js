@@ -78,16 +78,10 @@ self.addEventListener('push', event => {
 
     const options = {
         body: data.body,
-        icon: data.icon || '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
         vibrate: [200, 100, 200],
         tag: 'lead-notification',
         renotify: true,
         data: data.data || {},
-        actions: [
-            { action: 'open', title: 'Buka CRM' },
-            { action: 'close', title: 'Tutup' }
-        ]
     };
 
     event.waitUntil(

@@ -30,8 +30,6 @@ class PushNotificationService
             $payload = json_encode([
                 'title' => $title,
                 'body' => $body,
-                'icon' => '/icons/icon-192x192.png',
-                'badge' => '/icons/icon-192x192.png',
                 'data' => $data,
             ]);
 

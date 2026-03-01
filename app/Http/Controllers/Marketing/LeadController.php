@@ -79,6 +79,37 @@ class LeadController extends Controller
         return view('marketing.leads.show', compact('lead', 'whatsappTemplates', 'statuses'));
     }
 
+    public function quickStatus(Request $request, Lead $lead)
+    {
+        if ($lead->assigned_to !== auth()->id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'status_prospek' => 'required|in:New,Cold,Warm,Hot,Deal',
+        ]);
+
+        $oldStatus = $lead->status_prospek->value;
+        $lead->update(['status_prospek' => $validated['status_prospek']]);
+
+        $lead->histories()->create([
+            'user_id' => auth()->id(),
+            'action' => 'status_changed',
+            'old_values' => ['status_prospek' => $oldStatus],
+            'new_values' => ['status_prospek' => $validated['status_prospek']],
+        ]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Status {$lead->nama_customer} diubah ke {$validated['status_prospek']}",
+                'status' => $validated['status_prospek'],
+            ]);
+        }
+
+        return back()->with('success', "Status berhasil diubah ke {$validated['status_prospek']}.");
+    }
+
     public function update(Request $request, Lead $lead)
     {
         if ($lead->assigned_to !== auth()->id()) {

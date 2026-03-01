@@ -106,6 +106,8 @@ Route::prefix('marketing')
         Route::post('/leads', [MarketingLeadController::class, 'store'])->name('leads.store');
         Route::get('/leads/{lead}', [MarketingLeadController::class, 'show'])->name('leads.show');
         Route::put('/leads/{lead}', [MarketingLeadController::class, 'update'])->name('leads.update');
+        Route::patch('/leads/{lead}/quick-status', [MarketingLeadController::class, 'quickStatus'])->name('leads.quick-status');
+        Route::patch('/leads/{lead}/quick-reschedule', [FollowUpController::class, 'quickReschedule'])->name('leads.quick-reschedule');
         Route::get('/tasks/today', [FollowUpController::class, 'todaysTasks'])->name('tasks.today');
         Route::post('/tasks/{lead}/complete', [FollowUpController::class, 'complete'])->name('tasks.complete');
         Route::get('/news', [MarketingNewsController::class, 'index'])->name('news.index');
