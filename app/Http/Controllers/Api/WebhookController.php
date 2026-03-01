@@ -163,7 +163,7 @@ class WebhookController extends Controller
             'nama_customer' => $request->nama ?: 'Lead WhatsApp',
             'no_hp' => $phone,
             'status_prospek' => 'New',
-            'sumber_lead' => 'WhatsApp',
+            'sumber_lead' => $request->sumber ?: 'WhatsApp',
             'keterangan' => $request->pesan,
             'assigned_to' => $assignedTo,
             'assigned_at' => $assignedAt,
