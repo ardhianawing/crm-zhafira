@@ -51,16 +51,17 @@
                     </a>
                 </div>
 
-                {{-- Quick Status (1-tap complete) --}}
+                {{-- Status + Selesai Follow-up --}}
                 <div class="border-top mt-2 pt-2">
-                    <div class="d-flex gap-1 mb-1">
+                    {{-- Status buttons (hanya ganti status, tidak complete follow-up) --}}
+                    <div class="d-flex gap-1 mb-2">
                         @php
                             $statusColors = ['New'=>'#6c757d','Cold'=>'#0dcaf0','Warm'=>'#ffc107','Hot'=>'#dc3545','Deal'=>'#198754'];
                             $darkText = ['Cold','Warm'];
                         @endphp
                         @foreach($statuses as $status)
                         <button type="button"
-                                class="btn flex-fill quick-complete-btn"
+                                class="btn flex-fill quick-status-btn"
                                 style="
                                     font-size: 0.7rem;
                                     padding: 0.2rem 0;
@@ -69,39 +70,44 @@
                                     border: 1px solid {{ $statusColors[$status->value] }};
                                 "
                                 data-lead-id="{{ $lead->id }}"
-                                data-status="{{ $status->value }}">
+                                data-status="{{ $status->value }}"
+                                {{ $lead->status_prospek->value == $status->value ? 'data-active=true' : '' }}>
                             {{ $status->value }}
                         </button>
                         @endforeach
                     </div>
 
-                    {{-- Catatan + Reschedule inline --}}
-                    <div class="d-flex gap-3" style="font-size: 0.73rem;">
-                        <a class="text-muted text-decoration-none" data-bs-toggle="collapse" href="#catatan-{{ $lead->id }}">
-                            <i class="bi bi-chat-left-text"></i> Catatan
-                        </a>
-                        <a class="text-muted text-decoration-none" data-bs-toggle="collapse" href="#reschedule-{{ $lead->id }}">
-                            <i class="bi bi-calendar-event"></i> Reschedule
-                        </a>
-                    </div>
-                    <div class="collapse mt-1" id="catatan-{{ $lead->id }}">
+                    {{-- Catatan inline --}}
+                    <div class="collapse mb-2" id="catatan-{{ $lead->id }}">
                         <textarea class="form-control form-control-sm" rows="2" placeholder="Hasil follow-up..." id="catatan-input-{{ $lead->id }}" style="font-size: 0.75rem;"></textarea>
-                    </div>
-                    <div class="collapse mt-1" id="reschedule-{{ $lead->id }}">
-                        <div class="input-group input-group-sm">
-                            <input type="date" class="form-control" id="reschedule-date-{{ $lead->id }}" min="{{ now()->format('Y-m-d') }}" value="{{ now()->addDays(1)->format('Y-m-d') }}" style="font-size: 0.75rem;">
-                            <button class="btn btn-outline-primary reschedule-btn" type="button" data-lead-id="{{ $lead->id }}" style="font-size: 0.75rem;">
-                                <i class="bi bi-check"></i>
-                            </button>
-                        </div>
                     </div>
 
                     @if($lead->fase_followup >= 3)
-                    <div class="mt-1">
+                    <div class="mb-2">
                         <small class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-info-circle"></i> Fase 3 — pilih tanggal next:</small>
                         <input type="date" class="form-control form-control-sm mt-1" id="next-followup-{{ $lead->id }}" min="{{ now()->format('Y-m-d') }}" value="{{ now()->addDays(7)->format('Y-m-d') }}" style="font-size: 0.75rem;">
                     </div>
                     @endif
+
+                    {{-- Action buttons --}}
+                    <div class="d-flex gap-1">
+                        <a class="btn btn-sm flex-fill text-muted" data-bs-toggle="collapse" href="#catatan-{{ $lead->id }}" style="font-size: 0.73rem; border: 1px solid #dee2e6;">
+                            <i class="bi bi-chat-left-text"></i> Catatan
+                        </a>
+                        <button type="button" class="btn btn-sm flex-fill complete-followup-btn" style="background-color: #0f3d2e; color: #fff; font-size: 0.73rem;" data-lead-id="{{ $lead->id }}">
+                            <i class="bi bi-check-circle"></i> Selesai Follow-up
+                        </button>
+                    </div>
+
+                    {{-- Reschedule --}}
+                    <div class="d-flex gap-1 mt-1">
+                        <div class="input-group input-group-sm">
+                            <input type="date" class="form-control" id="reschedule-date-{{ $lead->id }}" min="{{ now()->format('Y-m-d') }}" value="{{ now()->addDays(1)->format('Y-m-d') }}" style="font-size: 0.75rem;">
+                            <button class="btn btn-outline-secondary reschedule-btn" type="button" data-lead-id="{{ $lead->id }}" style="font-size: 0.75rem;">
+                                <i class="bi bi-calendar-event"></i> Reschedule
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,18 +156,60 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('taskCount').textContent = remaining + ' tugas';
     }
 
-    document.querySelectorAll('.quick-complete-btn').forEach(function(btn) {
+    // Quick Status: hanya ganti status, tidak complete follow-up
+    document.querySelectorAll('.quick-status-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const leadId = this.dataset.leadId;
             const status = this.dataset.status;
+            const card = document.getElementById('task-card-' + leadId);
+            const buttons = card.querySelectorAll('.quick-status-btn');
+
+            buttons.forEach(b => b.disabled = true);
+
+            fetch(`/marketing/leads/${leadId}/quick-status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify({ status_prospek: status }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                buttons.forEach(b => b.disabled = false);
+                if (data.success) {
+                    // Update button styles
+                    const statusColors = {New:'#6c757d',Cold:'#0dcaf0',Warm:'#ffc107',Hot:'#dc3545',Deal:'#198754'};
+                    const darkText = ['Cold','Warm'];
+                    buttons.forEach(b => {
+                        const s = b.dataset.status;
+                        const isActive = s === status;
+                        b.style.backgroundColor = isActive ? statusColors[s] : 'transparent';
+                        b.style.color = isActive ? (darkText.includes(s) ? '#000' : '#fff') : statusColors[s];
+                        if (isActive) b.setAttribute('data-active', 'true');
+                        else b.removeAttribute('data-active');
+                    });
+                    showToast(data.message);
+                } else {
+                    showToast('Gagal mengubah status', true);
+                }
+            })
+            .catch(() => { buttons.forEach(b => b.disabled = false); showToast('Gagal mengubah status', true); });
+        });
+    });
+
+    // Selesai Follow-up: complete follow-up + naikkan fase
+    document.querySelectorAll('.complete-followup-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const leadId = this.dataset.leadId;
+            const card = document.getElementById('task-card-' + leadId);
+            const activeStatus = card.querySelector('.quick-status-btn[data-active]');
+            const status = activeStatus ? activeStatus.dataset.status : 'New';
             const catatan = document.getElementById('catatan-input-' + leadId)?.value || '';
             const nextFollowup = document.getElementById('next-followup-' + leadId)?.value || '';
 
             const body = { status_prospek: status, catatan: catatan };
             if (nextFollowup) body.tgl_next_followup = nextFollowup;
 
-            const card = document.getElementById('task-card-' + leadId);
-            card.querySelectorAll('.quick-complete-btn').forEach(b => b.disabled = true);
+            this.disabled = true;
+            const self = this;
 
             fetch(`/marketing/tasks/${leadId}/complete`, {
                 method: 'POST',
@@ -176,14 +224,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => { card.classList.add('d-none'); updateTaskCount(); }, 400);
                     showToast(data.message);
                 } else {
-                    card.querySelectorAll('.quick-complete-btn').forEach(b => b.disabled = false);
+                    self.disabled = false;
                     showToast('Gagal menyelesaikan follow-up', true);
                 }
             })
-            .catch(() => {
-                card.querySelectorAll('.quick-complete-btn').forEach(b => b.disabled = false);
-                showToast('Gagal menyelesaikan follow-up', true);
-            });
+            .catch(() => { self.disabled = false; showToast('Gagal menyelesaikan follow-up', true); });
         });
     });
 
