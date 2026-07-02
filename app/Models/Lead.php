@@ -20,12 +20,16 @@ class Lead extends Model
     protected static function booted(): void
     {
         static::creating(function (Lead $lead) {
+            $lead->phone_key = self::normalizePhone($lead->no_hp);
             if (!$lead->tgl_next_followup) {
                 $lead->tgl_next_followup = now()->toDateString();
             }
         });
 
         static::updating(function (Lead $lead) {
+            if ($lead->isDirty('no_hp')) {
+                $lead->phone_key = self::normalizePhone($lead->no_hp);
+            }
             if ($lead->isDirty('assigned_to') && $lead->assigned_to !== null) {
                 $lead->tgl_next_followup = now()->toDateString();
             }
@@ -35,6 +39,7 @@ class Lead extends Model
     protected $fillable = [
         'nama_customer',
         'no_hp',
+        'phone_key',
         'status_prospek',
         'fase_followup',
         'tgl_next_followup',
@@ -65,6 +70,11 @@ class Lead extends Model
         return $this->hasMany(LeadHistory::class)->orderBy('created_at', 'desc');
     }
 
+    public function duplicateMatches(): HasMany
+    {
+        return $this->hasMany(self::class, 'phone_key', 'phone_key');
+    }
+
     // Fungsi Baru untuk Badge Operan
     public function isTransferred(): bool
     {
@@ -84,13 +94,28 @@ class Lead extends Model
     public function scopeTodaysTasks($query)
     {
         return $query->whereNotNull('tgl_next_followup')
-            ->where('tgl_next_followup', '<=', now()->toDateString());
+            ->whereDate('tgl_next_followup', '<=', now()->toDateString());
+    }
+
+    public function scopeActiveFollowUps($query)
+    {
+        return $query->whereRaw("status_prospek NOT IN ('Deal', 'Tidak Berminat')");
+    }
+
+    public function scopeDuplicates($query)
+    {
+        return $query->whereNotNull('phone_key')
+            ->whereIn('phone_key', self::query()
+                ->select('phone_key')
+                ->whereNotNull('phone_key')
+                ->groupBy('phone_key')
+                ->havingRaw('COUNT(*) > 1'));
     }
 
     public function scopeOverdue($query)
     {
         return $query->whereNotNull('tgl_next_followup')
-            ->where('tgl_next_followup', '<', now()->toDateString());
+            ->whereDate('tgl_next_followup', '<', now()->toDateString());
     }
 
     public function scopeByStatus($query, $status)
@@ -111,12 +136,31 @@ class Lead extends Model
 
     public function getNormalizedPhoneAttribute(): string
     {
-        $phone = preg_replace('/[^0-9]/', '', $this->no_hp);
+        return self::normalizePhone($this->no_hp);
+    }
+
+    public function getDuplicateCountAttribute(): int
+    {
+        if (array_key_exists('duplicate_matches_count', $this->attributes)) {
+            return (int) $this->attributes['duplicate_matches_count'];
+        }
+
+        if (!$this->phone_key) {
+            return 0;
+        }
+
+        return self::query()->where('phone_key', $this->phone_key)->count();
+    }
+
+    public static function normalizePhone(?string $value): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', (string) $value);
         if (str_starts_with($phone, '0')) {
             $phone = '62' . substr($phone, 1);
         } elseif (!str_starts_with($phone, '62')) {
             $phone = '62' . $phone;
         }
+
         return $phone;
     }
 

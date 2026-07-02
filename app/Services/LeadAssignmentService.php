@@ -16,7 +16,9 @@ class LeadAssignmentService
     {
         return DB::transaction(function () use ($leadIds, $marketingId, $assignedBy) {
             $count = 0;
-            $leads = Lead::whereIn('id', $leadIds)->get();
+            $leads = Lead::whereIn('id', $leadIds)
+                ->whereNull('assigned_to')
+                ->get();
 
             foreach ($leads as $lead) {
                 $oldValues = $lead->toArray();

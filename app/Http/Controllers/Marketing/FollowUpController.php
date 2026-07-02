@@ -10,6 +10,7 @@ use App\Models\LeadHistory;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FollowUpController extends Controller
@@ -18,16 +19,29 @@ class FollowUpController extends Controller
         private FollowUpService $followUpService
     ) {}
 
-    public function todaysTasks(): View
+    public function todaysTasks(Request $request): View
     {
+        $due = in_array($request->due, ['all', 'overdue', 'today'], true)
+            ? $request->due
+            : 'all';
+        $status = in_array($request->status, StatusProspek::values(), true)
+            ? $request->status
+            : null;
+
         $leads = Lead::assignedTo(auth()->id())
+            ->activeFollowUps()
             ->todaysTasks()
+            ->when($due === 'overdue', fn ($query) => $query->whereDate('tgl_next_followup', '<', today()))
+            ->when($due === 'today', fn ($query) => $query->whereDate('tgl_next_followup', today()))
+            ->when($status, fn ($query, $value) => $query->where('status_prospek', $value))
+            ->orderByRaw("CASE WHEN status_prospek = 'Hot' THEN 0 ELSE 1 END")
             ->orderBy('tgl_next_followup', 'asc')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         $statuses = StatusProspek::cases();
 
-        return view('marketing.tasks.today', compact('leads', 'statuses'));
+        return view('marketing.tasks.today', compact('leads', 'statuses', 'due', 'status'));
     }
 
     public function complete(Request $request, Lead $lead)
@@ -39,7 +53,7 @@ class FollowUpController extends Controller
 
         $validated = $request->validate([
             'catatan' => 'nullable|string',
-            'status_prospek' => 'required|in:New,Cold,Warm,Hot,Deal',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
             'tgl_next_followup' => 'nullable|date|after_or_equal:today',
         ], [
             'status_prospek.required' => 'Status prospek wajib dipilih.',

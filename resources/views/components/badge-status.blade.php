@@ -8,6 +8,8 @@
         'Warm' => 'background-color: #ffc107; color: #000;',
         'Hot' => 'background-color: #dc3545; color: #fff;',
         'Deal' => 'background-color: #198754; color: #fff;',
+        'Tidak Respon' => 'background-color: #6f42c1; color: #fff;',
+        'Tidak Berminat' => 'background-color: #343a40; color: #fff;',
         default => 'background-color: #6c757d; color: #fff;',
     };
 @endphp

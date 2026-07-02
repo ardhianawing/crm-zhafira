@@ -9,6 +9,8 @@ enum StatusProspek: string
     case Warm = 'Warm';
     case Hot = 'Hot';
     case Deal = 'Deal';
+    case TidakRespon = 'Tidak Respon';
+    case TidakBerminat = 'Tidak Berminat';
 
     public function label(): string
     {
@@ -18,6 +20,8 @@ enum StatusProspek: string
             self::Warm => 'Warm',
             self::Hot => 'Hot',
             self::Deal => 'Deal',
+            self::TidakRespon => 'Tidak Respon',
+            self::TidakBerminat => 'Tidak Berminat',
         };
     }
 
@@ -29,6 +33,8 @@ enum StatusProspek: string
             self::Warm => 'warning',
             self::Hot => 'danger',
             self::Deal => 'success',
+            self::TidakRespon => 'secondary',
+            self::TidakBerminat => 'dark',
         };
     }
 

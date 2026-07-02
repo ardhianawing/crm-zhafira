@@ -103,7 +103,7 @@
                         $overdueCount = \App\Models\Lead::where('assigned_to', auth()->id())
                             ->whereNotNull('tgl_next_followup')
                             ->where('tgl_next_followup', '<=', now()->toDateString())
-                            ->whereNotIn('status_prospek', ['Deal', 'Loss'])
+                            ->whereNotIn('status_prospek', ['Deal', 'Tidak Berminat'])
                             ->count();
                     @endphp
                     <li class="nav-item">

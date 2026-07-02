@@ -7,8 +7,36 @@
     <h5 class="mb-0">
         <i class="bi bi-calendar-check" style="color: #0f3d2e;"></i> Tugas Hari Ini
     </h5>
-    <span class="badge" style="background-color: #0f3d2e; color: #fff; font-size: 0.8rem;" id="taskCount">{{ $leads->count() }} tugas</span>
+    <span class="badge" style="background-color: #0f3d2e; color: #fff; font-size: 0.8rem;" id="taskCount">{{ $leads->total() }} tugas</span>
 </div>
+
+<form method="GET" class="card card-body py-2 px-3 mb-3">
+    <div class="row g-2 align-items-center">
+        <div class="col-6 col-md-4">
+            <select name="due" class="form-select form-select-sm">
+                <option value="all" {{ $due === 'all' ? 'selected' : '' }}>Semua Jatuh Tempo</option>
+                <option value="overdue" {{ $due === 'overdue' ? 'selected' : '' }}>Overdue</option>
+                <option value="today" {{ $due === 'today' ? 'selected' : '' }}>Hari Ini</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-4">
+            <select name="status" class="form-select form-select-sm">
+                <option value="">Semua Status</option>
+                @foreach($statuses as $statusOption)
+                    <option value="{{ $statusOption->value }}" {{ $status === $statusOption->value ? 'selected' : '' }}>
+                        {{ $statusOption->value }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-12 col-md-4 d-flex gap-2">
+            <button class="btn btn-sm btn-zhafira flex-fill" type="submit">
+                <i class="bi bi-funnel"></i> Terapkan
+            </button>
+            <a href="{{ route('marketing.tasks.today') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+    </div>
+</form>
 
 @if($leads->count() > 0)
 <div class="row">
@@ -51,35 +79,55 @@
                     </a>
                 </div>
 
-                {{-- Status + Selesai Follow-up --}}
+                {{-- Alur utama: hasil + status + selesai --}}
                 <div class="border-top mt-2 pt-2">
-                    {{-- Status buttons (hanya ganti status, tidak complete follow-up) --}}
-                    <div class="d-flex gap-1 mb-2">
-                        @php
-                            $statusColors = ['New'=>'#6c757d','Cold'=>'#0dcaf0','Warm'=>'#ffc107','Hot'=>'#dc3545','Deal'=>'#198754'];
-                            $darkText = ['Cold','Warm'];
-                        @endphp
-                        @foreach($statuses as $status)
-                        <button type="button"
-                                class="btn flex-fill quick-status-btn"
-                                style="
-                                    font-size: 0.7rem;
-                                    padding: 0.2rem 0;
-                                    background-color: {{ $lead->status_prospek->value == $status->value ? $statusColors[$status->value] : 'transparent' }};
-                                    color: {{ $lead->status_prospek->value == $status->value ? (in_array($status->value, $darkText) ? '#000' : '#fff') : $statusColors[$status->value] }};
-                                    border: 1px solid {{ $statusColors[$status->value] }};
-                                "
-                                data-lead-id="{{ $lead->id }}"
-                                data-status="{{ $status->value }}"
-                                {{ $lead->status_prospek->value == $status->value ? 'data-active=true' : '' }}>
-                            {{ $status->value }}
-                        </button>
-                        @endforeach
+                    <div class="mb-2">
+                        <div class="small fw-semibold mb-1">Hasil cepat</div>
+                        <div class="quick-result-scroll d-flex gap-1 overflow-auto pb-1">
+                            <button type="button" class="btn btn-sm btn-outline-secondary quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Tidak Respon"
+                                    data-note="Belum merespons WhatsApp">Tidak Respon</button>
+                            <button type="button" class="btn btn-sm btn-outline-warning quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Warm"
+                                    data-note="Customer tertarik dan meminta informasi lanjutan">Tertarik</button>
+                            <button type="button" class="btn btn-sm btn-outline-warning quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Warm"
+                                    data-note="Customer meminta informasi harga">Minta Harga</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Hot"
+                                    data-note="Customer ingin menjadwalkan survei">Jadwal Survei</button>
+                            <button type="button" class="btn btn-sm btn-outline-success quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Deal"
+                                    data-note="Customer deal">Deal</button>
+                            <button type="button" class="btn btn-sm btn-outline-dark quick-result-btn"
+                                    data-lead-id="{{ $lead->id }}" data-status="Tidak Berminat"
+                                    data-note="Customer menyatakan tidak berminat">Tidak Berminat</button>
+                        </div>
                     </div>
 
-                    {{-- Catatan inline --}}
-                    <div class="collapse mb-2" id="catatan-{{ $lead->id }}">
-                        <textarea class="form-control form-control-sm" rows="2" placeholder="Hasil follow-up..." id="catatan-input-{{ $lead->id }}" style="font-size: 0.75rem;"></textarea>
+                    <div class="mb-2">
+                        <textarea class="form-control form-control-sm" rows="2"
+                                  placeholder="Catat hasil follow-up..."
+                                  id="catatan-input-{{ $lead->id }}"
+                                  style="font-size: 0.75rem;"></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2 mb-2">
+                        <select class="form-select form-select-sm task-status-select"
+                                id="status-input-{{ $lead->id }}"
+                                style="font-size: 0.75rem;">
+                            @foreach($statuses as $statusOption)
+                                <option value="{{ $statusOption->value }}" {{ $lead->status_prospek->value === $statusOption->value ? 'selected' : '' }}>
+                                    {{ $statusOption->value }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <button type="button"
+                                class="btn btn-sm complete-followup-btn text-nowrap"
+                                style="background-color: #0f3d2e; color: #fff; font-size: 0.75rem;"
+                                data-lead-id="{{ $lead->id }}">
+                            <i class="bi bi-check-circle"></i> Selesaikan Follow-up
+                        </button>
                     </div>
 
                     @if($lead->fase_followup >= 3)
@@ -89,22 +137,23 @@
                     </div>
                     @endif
 
-                    {{-- Action buttons --}}
-                    <div class="d-flex gap-1">
-                        <a class="btn btn-sm flex-fill text-muted" data-bs-toggle="collapse" href="#catatan-{{ $lead->id }}" style="font-size: 0.73rem; border: 1px solid #dee2e6;">
-                            <i class="bi bi-chat-left-text"></i> Catatan
+                    <div class="text-end">
+                        <a class="small text-muted text-decoration-none"
+                           data-bs-toggle="collapse"
+                           href="#reschedule-{{ $lead->id }}">
+                            <i class="bi bi-calendar-event"></i> Atur ulang jadwal
                         </a>
-                        <button type="button" class="btn btn-sm flex-fill complete-followup-btn" style="background-color: #0f3d2e; color: #fff; font-size: 0.73rem;" data-lead-id="{{ $lead->id }}">
-                            <i class="bi bi-check-circle"></i> Selesai Follow-up
-                        </button>
                     </div>
-
-                    {{-- Reschedule --}}
-                    <div class="d-flex gap-1 mt-1">
+                    <div class="collapse mt-2" id="reschedule-{{ $lead->id }}">
                         <div class="input-group input-group-sm">
-                            <input type="date" class="form-control" id="reschedule-date-{{ $lead->id }}" min="{{ now()->format('Y-m-d') }}" value="{{ now()->addDays(1)->format('Y-m-d') }}" style="font-size: 0.75rem;">
-                            <button class="btn btn-outline-secondary reschedule-btn" type="button" data-lead-id="{{ $lead->id }}" style="font-size: 0.75rem;">
-                                <i class="bi bi-calendar-event"></i> Reschedule
+                            <input type="date" class="form-control"
+                                   id="reschedule-date-{{ $lead->id }}"
+                                   min="{{ now()->format('Y-m-d') }}"
+                                   value="{{ now()->addDay()->format('Y-m-d') }}">
+                            <button class="btn btn-outline-secondary reschedule-btn"
+                                    type="button"
+                                    data-lead-id="{{ $lead->id }}">
+                                Simpan Jadwal
                             </button>
                         </div>
                     </div>
@@ -114,6 +163,11 @@
     </div>
     @endforeach
 </div>
+@if($leads->hasPages())
+<div class="mt-3">
+    {{ $leads->links() }}
+</div>
+@endif
 @else
 <div class="card">
     <div class="card-body text-center py-4">
@@ -138,10 +192,40 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    .quick-result-scroll {
+        scrollbar-width: none;
+    }
+    .quick-result-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    .quick-result-btn {
+        min-height: 38px;
+        white-space: nowrap;
+    }
+    @media (max-width: 767.98px) {
+        main.py-4 {
+            padding-top: 0.75rem !important;
+        }
+        main .container-fluid {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        .quick-result-btn,
+        .complete-followup-btn,
+        .task-status-select {
+            min-height: 44px;
+        }
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    let remainingTaskCount = {{ $leads->total() }};
 
     function showToast(message, isError) {
         const toast = document.getElementById('taskToast');
@@ -152,46 +236,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateTaskCount() {
-        const remaining = document.querySelectorAll('[id^="task-card-"]:not(.d-none)').length;
-        document.getElementById('taskCount').textContent = remaining + ' tugas';
+        remainingTaskCount = Math.max(0, remainingTaskCount - 1);
+        document.getElementById('taskCount').textContent = remainingTaskCount + ' tugas';
     }
 
-    // Quick Status: hanya ganti status, tidak complete follow-up
-    document.querySelectorAll('.quick-status-btn').forEach(function(btn) {
+    document.querySelectorAll('.quick-result-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const leadId = this.dataset.leadId;
-            const status = this.dataset.status;
-            const card = document.getElementById('task-card-' + leadId);
-            const buttons = card.querySelectorAll('.quick-status-btn');
+            document.getElementById('status-input-' + leadId).value = this.dataset.status;
+            document.getElementById('catatan-input-' + leadId).value = this.dataset.note;
 
-            buttons.forEach(b => b.disabled = true);
-
-            fetch(`/marketing/leads/${leadId}/quick-status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                body: JSON.stringify({ status_prospek: status }),
-            })
-            .then(r => r.json())
-            .then(data => {
-                buttons.forEach(b => b.disabled = false);
-                if (data.success) {
-                    // Update button styles
-                    const statusColors = {New:'#6c757d',Cold:'#0dcaf0',Warm:'#ffc107',Hot:'#dc3545',Deal:'#198754'};
-                    const darkText = ['Cold','Warm'];
-                    buttons.forEach(b => {
-                        const s = b.dataset.status;
-                        const isActive = s === status;
-                        b.style.backgroundColor = isActive ? statusColors[s] : 'transparent';
-                        b.style.color = isActive ? (darkText.includes(s) ? '#000' : '#fff') : statusColors[s];
-                        if (isActive) b.setAttribute('data-active', 'true');
-                        else b.removeAttribute('data-active');
-                    });
-                    showToast(data.message);
-                } else {
-                    showToast('Gagal mengubah status', true);
-                }
-            })
-            .catch(() => { buttons.forEach(b => b.disabled = false); showToast('Gagal mengubah status', true); });
+            this.closest('.quick-result-scroll').querySelectorAll('.quick-result-btn').forEach(item => {
+                item.classList.remove('active');
+            });
+            this.classList.add('active');
         });
     });
 
@@ -200,8 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const leadId = this.dataset.leadId;
             const card = document.getElementById('task-card-' + leadId);
-            const activeStatus = card.querySelector('.quick-status-btn[data-active]');
-            const status = activeStatus ? activeStatus.dataset.status : 'New';
+            const status = document.getElementById('status-input-' + leadId).value;
             const catatan = document.getElementById('catatan-input-' + leadId)?.value || '';
             const nextFollowup = document.getElementById('next-followup-' + leadId)?.value || '';
 

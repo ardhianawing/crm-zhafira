@@ -17,13 +17,17 @@ class LeadController extends Controller
         $perPage = min((int) $request->input('per_page', 50), 1000);
         
         $leads = Lead::with('assignedUser')
+            ->withCount('duplicateMatches')
             ->when($request->search, function($query, $search) {
-                return $query->where('nama_customer', 'like', "%{$search}%")
-                             ->orWhere('no_hp', 'like', "%{$search}%");
+                return $query->where(function ($query) use ($search) {
+                    $query->where('nama_customer', 'like', "%{$search}%")
+                        ->orWhere('no_hp', 'like', "%{$search}%");
+                });
             })
+            ->when($request->boolean('duplicates'), fn ($query) => $query->duplicates())
             ->orderBy('created_at', 'desc')
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'search' => $request->search]);
+            ->withQueryString();
 
         return view('admin.leads.index', compact('leads', 'perPage'));
     }
@@ -223,7 +227,6 @@ class LeadController extends Controller
 
             if ($exists) {
                 $duplicates++;
-                continue;
             }
 
             $lead = Lead::create([

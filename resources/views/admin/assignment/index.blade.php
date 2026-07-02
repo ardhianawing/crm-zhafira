@@ -23,17 +23,71 @@
                     </h6>
                     <div class="form-check small p-0 m-0 d-flex align-items-center">
                         <input class="form-check-input me-2" type="checkbox" id="selectAllUnassignedMaster" style="margin-top: 0;">
-                        <label class="form-check-label small d-none d-sm-block" for="selectAllUnassignedMaster">Pilih Semua</label>
-                        <label class="form-check-label small d-block d-sm-none" for="selectAllUnassignedMaster">Semua</label>
+                        <label class="form-check-label small" for="selectAllUnassignedMaster">Pilih halaman</label>
                     </div>
                 </div>
                 <div class="card-body p-0">
+                    <form action="{{ route('admin.assignment.index') }}" method="GET" class="p-2 p-md-3 border-bottom bg-light">
+                        <input type="hidden" name="per_page" value="{{ $perPage }}">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <label for="statusFilter" class="form-label small fw-bold mb-1">Status</label>
+                                <select id="statusFilter" name="status_filter" class="form-select form-select-sm">
+                                    <option value="">Semua status</option>
+                                    @foreach(['New', 'Cold', 'Warm', 'Hot', 'Deal'] as $status)
+                                        <option value="{{ $status }}" {{ request('status_filter') === $status ? 'selected' : '' }}>
+                                            {{ $status }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label for="sourceFilter" class="form-label small fw-bold mb-1">Sumber</label>
+                                <select id="sourceFilter" name="source_filter" class="form-select form-select-sm">
+                                    <option value="">Semua sumber</option>
+                                    @foreach($leadSources as $source)
+                                        <option value="{{ $source }}" {{ request('source_filter') === $source ? 'selected' : '' }}>
+                                            {{ $source }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label for="leadSearch" class="form-label small fw-bold mb-1">Cari lead</label>
+                                <input id="leadSearch" type="search" name="search" value="{{ request('search') }}"
+                                    class="form-control form-control-sm" placeholder="Nama atau nomor HP">
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end gap-1">
+                                <button type="submit" class="btn btn-sm btn-dark flex-grow-1">
+                                    <i class="bi bi-funnel"></i> Filter
+                                </button>
+                                <a href="{{ route('admin.assignment.index', ['per_page' => $perPage]) }}"
+                                    class="btn btn-sm btn-outline-secondary" title="Reset filter">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
                     <form action="{{ route('admin.assignment.bulk') }}" method="POST" id="bulkAssignForm">
                         @csrf
+                        <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
+                        <input type="hidden" name="source_filter" value="{{ request('source_filter') }}">
+                        <input type="hidden" name="search" value="{{ request('search') }}">
                         <div class="p-2 p-md-3 border-bottom sticky-top" style="top: 0; z-index: 10; background-color: #f8f9fa;">
-                            <div class="row g-1 g-md-2 align-items-center">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-12">
+                                    <div class="form-check d-flex align-items-center gap-2 mb-0">
+                                        <input class="form-check-input mt-0" type="checkbox" value="1"
+                                            name="select_all_filtered" id="selectAllFiltered">
+                                        <label class="form-check-label small" for="selectAllFiltered">
+                                            Pilih semua <strong>{{ $unassignedLeads->total() }}</strong> hasil filter
+                                            <span class="text-muted">(lintas halaman)</span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div class="col">
-                                    <select name="marketing_id" class="form-select form-select-sm" required>
+                                    <select name="marketing_id" id="bulkMarketingId" class="form-select form-select-sm" required>
                                         <option value="">Pilih Marketing...</option>
                                         @foreach($marketingUsers as $user)
                                             <option value="{{ $user->id }}">
@@ -43,9 +97,14 @@
                                     </select>
                                 </div>
                                 <div class="col-auto">
-                                    <button type="submit" class="btn btn-sm px-2 px-md-3" style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
+                                    <button type="submit" class="btn btn-sm px-2 px-md-3" id="bulkAssignButton"
+                                        data-filtered-count="{{ $unassignedLeads->total() }}"
+                                        style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
                                         <i class="bi bi-person-check"></i> <span class="d-none d-sm-inline">Bagi Lead</span><span class="d-inline d-sm-none">Bagi</span>
                                     </button>
+                                </div>
+                                <div class="col-12">
+                                    <small class="text-muted" id="selectedLeadCount">Belum ada lead dipilih.</small>
                                 </div>
                             </div>
                         </div>
@@ -323,6 +382,9 @@
         <div class="bg-white p-2 rounded shadow-sm border d-flex align-items-center gap-2">
             <form action="{{ url()->current() }}" method="GET" class="d-flex align-items-center gap-2 mb-0">
                 <input type="hidden" name="marketing_filter" value="{{ request('marketing_filter') }}">
+                <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
+                <input type="hidden" name="source_filter" value="{{ request('source_filter') }}">
+                <input type="hidden" name="search" value="{{ request('search') }}">
                 <span class="text-muted small fw-bold">Tampilkan:</span>
                 <select name="per_page" onchange="this.form.submit()" class="form-select form-select-sm"
                     style="width: auto;">
@@ -343,12 +405,75 @@
             // Select All - Unassigned
             const selectAllUnassignedMaster = document.getElementById('selectAllUnassignedMaster');
             const unassignedCheckboxes = document.querySelectorAll('.unassigned-checkbox');
+            const selectAllFiltered = document.getElementById('selectAllFiltered');
+            const selectedLeadCount = document.getElementById('selectedLeadCount');
+            const bulkAssignForm = document.getElementById('bulkAssignForm');
+            const bulkAssignButton = document.getElementById('bulkAssignButton');
+            const bulkMarketingId = document.getElementById('bulkMarketingId');
+
+            function updateUnassignedSelection() {
+                const checkedCount = document.querySelectorAll('.unassigned-checkbox:checked').length;
+                const filteredCount = Number(bulkAssignButton?.dataset.filteredCount || 0);
+
+                if (selectAllFiltered?.checked) {
+                    selectedLeadCount.textContent = `${filteredCount} lead hasil filter akan dibagikan.`;
+                    unassignedCheckboxes.forEach(cb => {
+                        cb.checked = true;
+                        cb.disabled = true;
+                    });
+                    if (selectAllUnassignedMaster) {
+                        selectAllUnassignedMaster.checked = true;
+                        selectAllUnassignedMaster.disabled = true;
+                    }
+                    return;
+                }
+
+                unassignedCheckboxes.forEach(cb => cb.disabled = false);
+                if (selectAllUnassignedMaster) {
+                    selectAllUnassignedMaster.disabled = false;
+                    selectAllUnassignedMaster.checked = checkedCount > 0 && checkedCount === unassignedCheckboxes.length;
+                }
+                selectedLeadCount.textContent = checkedCount > 0
+                    ? `${checkedCount} lead pada halaman ini dipilih.`
+                    : 'Belum ada lead dipilih.';
+            }
 
             if (selectAllUnassignedMaster) {
                 selectAllUnassignedMaster.addEventListener('change', function () {
                     unassignedCheckboxes.forEach(cb => cb.checked = this.checked);
+                    updateUnassignedSelection();
                 });
             }
+
+            unassignedCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateUnassignedSelection);
+            });
+
+            if (selectAllFiltered) {
+                selectAllFiltered.addEventListener('change', updateUnassignedSelection);
+            }
+
+            if (bulkAssignForm) {
+                bulkAssignForm.addEventListener('submit', function (event) {
+                    const selectedOption = bulkMarketingId.options[bulkMarketingId.selectedIndex];
+                    const marketingName = selectedOption?.textContent?.trim() || 'marketing terpilih';
+                    const count = selectAllFiltered.checked
+                        ? Number(bulkAssignButton.dataset.filteredCount || 0)
+                        : document.querySelectorAll('.unassigned-checkbox:checked').length;
+
+                    if (count === 0) {
+                        event.preventDefault();
+                        alert('Pilih minimal satu lead untuk dibagikan.');
+                        return;
+                    }
+
+                    if (!confirm(`Bagikan ${count} lead kepada ${marketingName}?`)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            updateUnassignedSelection();
 
             // Select All - Assigned
             const selectAllAssignedMaster = document.getElementById('selectAllAssignedMaster');

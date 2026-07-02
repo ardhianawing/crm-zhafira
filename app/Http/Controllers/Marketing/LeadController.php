@@ -8,6 +8,7 @@ use App\Models\WhatsappTemplate;
 use App\Enums\StatusProspek;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
@@ -15,6 +16,10 @@ class LeadController extends Controller
     {
         $userId = auth()->id();
         $statuses = StatusProspek::cases();
+        $due = in_array($request->due, ['overdue', 'today', 'upcoming'], true)
+            ? $request->due
+            : null;
+        $source = $request->filled('source') ? trim($request->source) : null;
 
         $leads = Lead::assignedTo($userId)
             ->when($request->search, function ($query, $search) {
@@ -26,12 +31,23 @@ class LeadController extends Controller
             ->when($request->status, function ($query, $status) {
                 return $query->where('status_prospek', $status);
             })
+            ->when($source, fn ($query, $value) => $query->where('sumber_lead', $value))
+            ->when($due === 'overdue', fn ($query) => $query->whereDate('tgl_next_followup', '<', today()))
+            ->when($due === 'today', fn ($query) => $query->whereDate('tgl_next_followup', today()))
+            ->when($due === 'upcoming', fn ($query) => $query->whereDate('tgl_next_followup', '>', today()))
             ->orderByRaw("CASE WHEN status_prospek = 'Hot' THEN 0 ELSE 1 END")
             ->orderBy('tgl_next_followup', 'asc')
             ->paginate(15)
             ->withQueryString();
 
-        return view('marketing.leads.index', compact('leads', 'statuses'));
+        $sources = Lead::assignedTo($userId)
+            ->whereNotNull('sumber_lead')
+            ->where('sumber_lead', '!=', '')
+            ->distinct()
+            ->orderBy('sumber_lead')
+            ->pluck('sumber_lead');
+
+        return view('marketing.leads.index', compact('leads', 'statuses', 'sources'));
     }
 
     public function create(): View
@@ -86,7 +102,7 @@ class LeadController extends Controller
         }
 
         $validated = $request->validate([
-            'status_prospek' => 'required|in:New,Cold,Warm,Hot,Deal',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
         ]);
 
         $oldStatus = $lead->status_prospek->value;

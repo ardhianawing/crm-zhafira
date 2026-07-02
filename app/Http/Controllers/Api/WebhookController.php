@@ -22,12 +22,7 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Cek duplikat berdasarkan Nomor HP
-        $exists = Lead::where('no_hp', $request->nomor)->exists();
-
-        if ($exists) {
-            return response()->json(['message' => 'Lead sudah ada (duplicate)', 'action' => 'skipped']);
-        }
+        $isDuplicate = Lead::where('phone_key', Lead::normalizePhone($request->nomor))->exists();
 
         // Auto-assign dengan rotator jika aktif
         $assignedTo = null;
@@ -92,6 +87,7 @@ class WebhookController extends Controller
         return response()->json([
             'message' => 'Lead berhasil masuk',
             'action' => 'created',
+            'duplicate' => $isDuplicate,
             'assigned_to' => $assignedName,
             'wa_notif_sent' => $waNotifSent,
         ]);
@@ -106,23 +102,28 @@ class WebhookController extends Controller
 
         $leads = $request->leads;
         $count = 0;
+        $duplicates = 0;
 
         foreach ($leads as $data) {
-            $exists = Lead::where('no_hp', $data['nomor'])->exists();
-            if (!$exists) {
-                Lead::create([
-                    'nama_customer' => $data['nama'],
-                    'no_hp' => $data['nomor'],
-                    'status_prospek' => $data['status'] ?? 'New',
-                    'sumber_lead' => 'Google Sheets Bulk',
-                    'keterangan' => $data['keterangan'],
-                    'assigned_to' => null,
-                ]);
-                $count++;
+            if (Lead::where('phone_key', Lead::normalizePhone($data['nomor']))->exists()) {
+                $duplicates++;
             }
+
+            Lead::create([
+                'nama_customer' => $data['nama'],
+                'no_hp' => $data['nomor'],
+                'status_prospek' => $data['status'] ?? 'New',
+                'sumber_lead' => 'Google Sheets Bulk',
+                'keterangan' => $data['keterangan'],
+                'assigned_to' => null,
+            ]);
+            $count++;
         }
 
-        return response()->json(['message' => $count . ' Leads berhasil masuk ke antrean']);
+        return response()->json([
+            'message' => $count . ' Leads berhasil masuk ke antrean',
+            'duplicates_marked' => $duplicates,
+        ]);
     }
 
     // Terima data dari WhatsApp Bot
@@ -140,34 +141,7 @@ class WebhookController extends Controller
             $phone = '62' . $phone;
         }
 
-        // Cek duplikat (multi-format)
-        $existingLead = Lead::where('no_hp', $phone)
-            ->orWhere('no_hp', '0' . substr($phone, 2))
-            ->orWhere('no_hp', '+62' . substr($phone, 2))
-            ->first();
-
-        if ($existingLead) {
-            $response = [
-                'success' => true,
-                'message' => 'Lead sudah ada (duplicate)',
-                'action' => 'skipped',
-                'crm_id' => $existingLead->id,
-            ];
-
-            // Return info marketing jika sudah di-assign
-            if ($existingLead->assigned_to) {
-                $marketing = User::find($existingLead->assigned_to);
-                if ($marketing) {
-                    $response['marketing'] = [
-                        'id'   => $marketing->id,
-                        'nama' => $marketing->nama_lengkap,
-                        'wa'   => $marketing->no_hp ?? '',
-                    ];
-                }
-            }
-
-            return response()->json($response);
-        }
+        $isDuplicate = Lead::where('phone_key', $phone)->exists();
 
         // Auto-assign dengan rotator jika aktif
         $assignedTo = null;
@@ -263,6 +237,7 @@ class WebhookController extends Controller
             'success'        => true,
             'message'        => 'Lead berhasil masuk',
             'action'         => 'created',
+            'duplicate'      => $isDuplicate,
             'crm_id'         => $lead->id,
             'wa_notif_sent'  => $waNotifSent,
         ];

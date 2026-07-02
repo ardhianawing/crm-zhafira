@@ -16,10 +16,10 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" name="search" class="form-control" placeholder="Cari nama/no HP..." value="{{ request('search') }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="status" class="form-select">
                     <option value="">Semua Status</option>
                     @foreach($statuses as $status)
@@ -29,11 +29,27 @@
                     @endforeach
                 </select>
             </div>
+            <div class="col-md-2">
+                <select name="due" class="form-select">
+                    <option value="">Semua Jadwal</option>
+                    <option value="overdue" {{ request('due') === 'overdue' ? 'selected' : '' }}>Overdue</option>
+                    <option value="today" {{ request('due') === 'today' ? 'selected' : '' }}>Hari Ini</option>
+                    <option value="upcoming" {{ request('due') === 'upcoming' ? 'selected' : '' }}>Akan Datang</option>
+                </select>
+            </div>
             <div class="col-md-3">
+                <select name="source" class="form-select">
+                    <option value="">Semua Sumber</option>
+                    @foreach($sources as $source)
+                        <option value="{{ $source }}" {{ request('source') === $source ? 'selected' : '' }}>{{ $source }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
                 <button type="submit" class="btn" style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
-                    <i class="bi bi-search"></i> Filter
+                    <i class="bi bi-search"></i>
                 </button>
-                <a href="{{ route('marketing.leads.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <a href="{{ route('marketing.leads.index') }}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
             </div>
         </form>
     </div>

@@ -22,7 +22,7 @@
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <form action="{{ route('admin.leads.index') }}" method="GET" class="d-flex align-items-center gap-3">
+                <form action="{{ route('admin.leads.index') }}" method="GET" class="d-flex align-items-center gap-3 flex-wrap">
                     <div class="d-flex align-items-center gap-2 bg-light px-3 py-1 rounded border">
                         <span class="small fw-bold text-nowrap">Tampilkan:</span>
                         <select name="per_page" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 100px;" onchange="this.form.submit()">
@@ -35,6 +35,12 @@
                         <input type="text" name="search" class="form-control" placeholder="Cari nama/hp..." value="{{ request('search') }}">
                         <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
                     </div>
+                    <input type="hidden" name="duplicates" value="0">
+                    <label class="btn btn-sm {{ request()->boolean('duplicates') ? 'btn-warning' : 'btn-outline-warning' }}">
+                        <input class="visually-hidden" type="checkbox" name="duplicates" value="1"
+                               onchange="this.form.submit()" {{ request()->boolean('duplicates') ? 'checked' : '' }}>
+                        <i class="bi bi-files"></i> Hanya Duplikat
+                    </label>
                 </form>
             </div>
             <div class="col-md-6 text-md-end">
@@ -64,7 +70,14 @@
                         <div class="fw-bold">{{ $lead->nama_customer }}</div>
                         <small class="text-muted">{{ $lead->created_at->format('d M Y') }}</small>
                     </td>
-                    <td>{{ $lead->no_hp }}</td>
+                    <td>
+                        <div>{{ $lead->no_hp }}</div>
+                        @if($lead->duplicate_matches_count > 1)
+                            <span class="badge bg-warning text-dark mt-1">
+                                <i class="bi bi-files"></i> Duplikat {{ $lead->duplicate_matches_count }}
+                            </span>
+                        @endif
+                    </td>
                     <td><span class="badge" style="background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6;">{{ $lead->sumber_lead ?? '-' }}</span></td>
                     <td>
                         @if($lead->assignedUser)

@@ -6,7 +6,7 @@
 @if($todayTasksCount > 0)
 <div class="alert alert-warning alert-dismissible fade show py-2 px-3 mb-3" role="alert" style="font-size: 0.82rem; border-left: 4px solid #ffc107;">
     <i class="bi bi-bell-fill me-1"></i>
-    <strong>{{ $todayTasksCount }}</strong> tugas follow-up hari ini.
+    <strong>{{ $todayTasksCount }}</strong> follow-up perlu ditindaklanjuti.
     <a href="{{ route('marketing.tasks.today') }}" class="alert-link">Kerjakan →</a>
     <button type="button" class="btn-close" data-bs-dismiss="alert" style="font-size: 0.6rem; padding: 0.7rem;"></button>
 </div>
@@ -105,6 +105,8 @@
                     'Warm' => ['bg' => '#ffc107', 'fg' => '#000'],
                     'Hot'  => ['bg' => '#dc3545', 'fg' => '#fff'],
                     'Deal' => ['bg' => '#198754', 'fg' => '#fff'],
+                    'Tidak Respon' => ['bg' => '#6f42c1', 'fg' => '#fff'],
+                    'Tidak Berminat' => ['bg' => '#343a40', 'fg' => '#fff'],
                 ];
             @endphp
             @foreach($statusConfig as $status => $colors)
@@ -122,12 +124,27 @@
     <div class="col-md-7">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #0f3d2e; color: #fff;">
-                <span class="text-nowrap"><i class="bi bi-calendar-check"></i> Follow-up</span>
+                <span class="text-nowrap"><i class="bi bi-calendar-check"></i> 5 Follow-up Prioritas</span>
                 <a href="{{ route('marketing.tasks.today') }}" class="btn btn-sm text-nowrap ms-2" style="background-color: #c9a227; border-color: #c9a227; color: #000; font-size: 0.75rem; padding: 0.2rem 0.5rem;">Lihat Semua</a>
             </div>
             <div class="card-body">
                 @forelse($todaysFollowups as $lead)
-                    <x-lead-card :lead="$lead" />
+                    <div class="border-bottom py-2">
+                        <div class="d-flex justify-content-between gap-2">
+                            <div class="min-w-0">
+                                <strong class="d-block text-truncate">{{ $lead->nama_customer }}</strong>
+                                <small class="text-muted">
+                                    {{ $lead->status_prospek->value }} · F{{ $lead->fase_followup }} ·
+                                    <span class="{{ $lead->isOverdue() ? 'text-danger fw-semibold' : '' }}">
+                                        {{ $lead->isOverdue() ? $lead->tgl_next_followup->diffForHumans() : 'Hari ini' }}
+                                    </span>
+                                </small>
+                            </div>
+                            <a href="{{ route('marketing.tasks.today') }}" class="btn btn-sm btn-outline-zhafira flex-shrink-0">
+                                Kerjakan
+                            </a>
+                        </div>
+                    </div>
                 @empty
                 <div class="text-center py-4 text-muted">
                     <i class="bi bi-check-circle fs-3 d-block mb-2"></i>
@@ -190,71 +207,4 @@
     </div>
 </div>
 
-<!-- Toast Notification -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
-    <div id="quickStatusToast" class="toast align-items-center text-white bg-success border-0" role="alert">
-        <div class="d-flex">
-            <div class="toast-body" id="toastMessage"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    </div>
-</div>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const statusColors = {
-        'New': { bg: '#6c757d', color: '#fff' },
-        'Cold': { bg: '#0dcaf0', color: '#000' },
-        'Warm': { bg: '#ffc107', color: '#000' },
-        'Hot': { bg: '#dc3545', color: '#fff' },
-        'Deal': { bg: '#198754', color: '#fff' },
-    };
-
-    function showToast(message, isError) {
-        const toast = document.getElementById('quickStatusToast');
-        const body = document.getElementById('toastMessage');
-        toast.className = 'toast align-items-center text-white border-0 ' + (isError ? 'bg-danger' : 'bg-success');
-        body.textContent = message;
-        new bootstrap.Toast(toast).show();
-    }
-
-    document.querySelectorAll('.card-quick-status').forEach(function(item) {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const leadId = this.dataset.leadId;
-            const newStatus = this.dataset.status;
-
-            fetch(`/marketing/leads/${leadId}/quick-status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({ status_prospek: newStatus }),
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    const cardBtn = document.getElementById('card-status-btn-' + leadId);
-                    if (cardBtn) {
-                        const badge = cardBtn.querySelector('.badge');
-                        badge.textContent = newStatus;
-                        badge.style.backgroundColor = statusColors[newStatus].bg;
-                        badge.style.color = statusColors[newStatus].color;
-                        cardBtn.closest('.dropdown').querySelectorAll('.dropdown-item').forEach(di => {
-                            di.classList.remove('active');
-                            if (di.dataset.status === newStatus) di.classList.add('active');
-                        });
-                    }
-                    showToast(data.message);
-                }
-            })
-            .catch(() => showToast('Gagal mengubah status', true));
-        });
-    });
-});
-</script>
-@endpush

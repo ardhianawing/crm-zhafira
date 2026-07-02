@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('nama_customer', 100);
             $table->string('no_hp', 20);
-            $table->enum('status_prospek', ['New', 'Cold', 'Warm', 'Hot', 'Deal'])->default('New');
+            $table->string('phone_key', 20)->nullable();
+            $table->enum('status_prospek', ['New', 'Cold', 'Warm', 'Hot', 'Deal', 'Tidak Respon', 'Tidak Berminat'])->default('New');
             $table->tinyInteger('fase_followup')->default(0);
             $table->date('tgl_next_followup')->nullable();
             $table->text('catatan_terakhir')->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration
 
             $table->index('status_prospek');
             $table->index('tgl_next_followup');
+            $table->index('phone_key');
         });
     }
 
