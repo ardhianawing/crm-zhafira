@@ -109,6 +109,45 @@ class AdminLeadIndexFilterTest extends TestCase
         });
     }
 
+    public function test_bulk_delete_removes_only_selected_leads(): void
+    {
+        $one = Lead::create([
+            'nama_customer' => 'Hapus Satu',
+            'no_hp' => '628411111111',
+            'status_prospek' => 'New',
+        ]);
+
+        $two = Lead::create([
+            'nama_customer' => 'Hapus Dua',
+            'no_hp' => '628422222222',
+            'status_prospek' => 'New',
+        ]);
+
+        $keep = Lead::create([
+            'nama_customer' => 'Simpan',
+            'no_hp' => '628433333333',
+            'status_prospek' => 'New',
+        ]);
+
+        $response = $this->actingAs($this->admin)->delete(route('admin.leads.bulk-delete'), [
+            'lead_ids' => [$one->id, $two->id],
+        ]);
+
+        $response->assertRedirect(route('admin.leads.index'));
+        $response->assertSessionHas('success', '2 lead berhasil dihapus.');
+
+        $this->assertDatabaseMissing('leads', ['id' => $one->id]);
+        $this->assertDatabaseMissing('leads', ['id' => $two->id]);
+        $this->assertDatabaseHas('leads', ['id' => $keep->id]);
+    }
+
+    public function test_bulk_delete_requires_lead_ids(): void
+    {
+        $this->actingAs($this->admin)
+            ->delete(route('admin.leads.bulk-delete'), [])
+            ->assertSessionHasErrors('lead_ids');
+    }
+
     public function test_index_filter_uses_full_status_enum_including_tidak_berminat(): void
     {
         $matching = Lead::create([

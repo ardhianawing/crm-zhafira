@@ -149,6 +149,19 @@ class LeadController extends Controller
         return redirect()->route('admin.leads.index')->with('success', 'Lead berhasil dihapus.');
     }
 
+    public function destroyBulk(Request $request)
+    {
+        $validated = $request->validate([
+            'lead_ids' => ['required', 'array'],
+            'lead_ids.*' => ['integer', 'exists:leads,id'],
+        ]);
+
+        $deletedCount = Lead::whereIn('id', $validated['lead_ids'])->delete();
+
+        return redirect()->route('admin.leads.index')
+            ->with('success', $deletedCount . ' lead berhasil dihapus.');
+    }
+
     public function history(Lead $lead)
     {
         $lead->load(['histories.user']);

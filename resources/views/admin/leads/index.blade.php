@@ -94,11 +94,27 @@
     </div>
 </div>
 
+{{-- Form hapus massal sengaja di luar tabel (checkbox terhubung via atribut form="bulkDeleteForm")
+     agar tidak menjadi nested form dengan form hapus per-baris di dalam tabel --}}
+<form action="{{ route('admin.leads.bulk-delete') }}" method="POST" id="bulkDeleteForm"
+    onsubmit="return confirm('Hapus ' + (document.querySelectorAll('.lead-checkbox:checked').length) + ' lead terpilih? Tindakan ini tidak bisa dibatalkan.');">
+    @csrf @method('DELETE')
+</form>
+
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="p-2 px-3 bg-light border-bottom d-flex align-items-center gap-2 flex-wrap" id="bulkActionBar">
+        <span class="small text-muted" id="bulkSelectedCount">Belum ada lead dipilih.</span>
+        <button type="submit" form="bulkDeleteForm" class="btn btn-sm btn-danger ms-auto" id="bulkDeleteButton" disabled>
+            <i class="bi bi-trash"></i> Hapus Terpilih
+        </button>
+    </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr style="background-color: #0f3d2e; color: #fff;">
+                    <th style="width: 38px; background-color: #0f3d2e; color: #fff;">
+                        <input class="form-check-input" type="checkbox" id="selectAllLeads" title="Pilih semua di halaman ini">
+                    </th>
                     <th style="background-color: #0f3d2e; color: #fff; font-weight: 500;">Customer</th>
                     <th style="background-color: #0f3d2e; color: #fff; font-weight: 500;">WhatsApp</th>
                     <th style="background-color: #0f3d2e; color: #fff; font-weight: 500;">Sumber</th>
@@ -110,6 +126,10 @@
             <tbody>
                 @forelse($leads as $lead)
                 <tr>
+                    <td>
+                        <input class="form-check-input lead-checkbox" type="checkbox"
+                            name="lead_ids[]" value="{{ $lead->id }}" form="bulkDeleteForm">
+                    </td>
                     <td>
                         <div class="fw-bold">{{ $lead->nama_customer }}</div>
                         <small class="text-muted">{{ $lead->created_at->format('d M Y') }}</small>
@@ -144,7 +164,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="text-center py-5">Tidak ada data leads.</td></tr>
+                <tr><td colspan="7" class="text-center py-5">Tidak ada data leads.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -154,3 +174,36 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAll = document.getElementById('selectAllLeads');
+        const checkboxes = Array.from(document.querySelectorAll('.lead-checkbox'));
+        const deleteButton = document.getElementById('bulkDeleteButton');
+        const selectedCount = document.getElementById('bulkSelectedCount');
+
+        function refresh() {
+            const checked = checkboxes.filter(cb => cb.checked).length;
+            deleteButton.disabled = checked === 0;
+            selectedCount.textContent = checked === 0
+                ? 'Belum ada lead dipilih.'
+                : `${checked} lead dipilih.`;
+            if (selectAll) {
+                selectAll.checked = checked > 0 && checked === checkboxes.length;
+                selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+            }
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                refresh();
+            });
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', refresh));
+        refresh();
+    });
+</script>
+@endpush
