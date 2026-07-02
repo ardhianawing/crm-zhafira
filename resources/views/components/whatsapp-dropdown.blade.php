@@ -8,14 +8,20 @@
         $normalizedPhone = '62' . $normalizedPhone;
     }
 
-    $autoTemplate = app(\App\Services\FollowUpService::class)->getWhatsAppTemplate($lead);
-    $autoUrl = "https://wa.me/{$normalizedPhone}?text=" . urlencode($autoTemplate);
-
     // Cache templates (loaded once per request)
     static $waTemplates = null;
     if ($waTemplates === null) {
         $waTemplates = \App\Models\WhatsappTemplate::active()->ordered()->get();
     }
+
+    // Auto template = template untuk fase lead ini → template umum → default service.
+    // Diambil dari koleksi yang sudah dimuat agar tidak memicu query per-baris (N+1).
+    $autoTpl = $waTemplates->firstWhere('fase', $lead->fase_followup)
+        ?? $waTemplates->first(fn ($t) => is_null($t->fase));
+    $autoTemplate = $autoTpl
+        ? $autoTpl->renderFor($lead)
+        : app(\App\Services\FollowUpService::class)->getWhatsAppTemplate($lead);
+    $autoUrl = "https://wa.me/{$normalizedPhone}?text=" . urlencode($autoTemplate);
 @endphp
 
 <div class="btn-group {{ $class }}" role="group">
@@ -30,12 +36,7 @@
         <li><h6 class="dropdown-header py-1" style="font-size: 0.7rem;">Pilih Template</h6></li>
         @foreach($waTemplates as $tpl)
         @php
-            $rendered = str_replace(
-                ['{nama_customer}', '{nama_marketing}'],
-                [$lead->nama_customer, auth()->user()->nama_lengkap],
-                $tpl->isi_template
-            );
-            $tplUrl = "https://wa.me/{$normalizedPhone}?text=" . urlencode($rendered);
+            $tplUrl = "https://wa.me/{$normalizedPhone}?text=" . urlencode($tpl->renderFor($lead));
         @endphp
         <li>
             <a class="dropdown-item py-1 text-truncate" href="{{ $tplUrl }}" target="_blank" style="max-width: 250px;">

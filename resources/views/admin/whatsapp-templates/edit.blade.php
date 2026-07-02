@@ -28,12 +28,28 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="fase" class="form-label">Untuk Fase Follow-up</label>
+                        @php $currentFase = old('fase', $whatsappTemplate->fase); @endphp
+                        <select class="form-select @error('fase') is-invalid @enderror" id="fase" name="fase">
+                            <option value="" {{ $currentFase === null ? 'selected' : '' }}>Umum (tidak terikat fase)</option>
+                            @foreach([0,1,2,3] as $f)
+                                <option value="{{ $f }}" {{ (string) $currentFase === (string) $f ? 'selected' : '' }}>Fase {{ $f }}</option>
+                            @endforeach
+                        </select>
+                        @error('fase')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">Template ber-fase dipakai otomatis oleh tombol "Chat" saat lead berada di fase tersebut.</small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="isi_template" class="form-label">Isi Template <span class="text-danger">*</span></label>
                         <textarea class="form-control @error('isi_template') is-invalid @enderror"
                             id="isi_template" name="isi_template" rows="8" required>{{ old('isi_template', $whatsappTemplate->isi_template) }}</textarea>
                         @error('isi_template')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <small class="text-muted">Placeholder: <code>{nama_customer}</code> dan <code>{nama_marketing}</code> akan otomatis diganti.</small>
                     </div>
 
                     <div class="d-flex gap-2">

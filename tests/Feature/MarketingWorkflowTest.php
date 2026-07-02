@@ -248,6 +248,76 @@ class MarketingWorkflowTest extends TestCase
         });
     }
 
+    public function test_whatsapp_auto_template_prefers_db_fase_template_and_renders_placeholders(): void
+    {
+        WhatsappTemplate::query()->delete();
+
+        WhatsappTemplate::create([
+            'nama_template' => 'Fase 2 Custom',
+            'isi_template' => 'Hai {nama_customer}, dari {nama_marketing}.',
+            'fase' => 2,
+            'is_active' => true,
+            'urutan' => 1,
+        ]);
+
+        $lead = $this->lead(['nama_customer' => 'Pak Budi', 'fase_followup' => 2]);
+
+        $this->actingAs($this->marketing);
+        $result = app(\App\Services\FollowUpService::class)->getWhatsAppTemplate($lead);
+
+        $this->assertSame('Hai Pak Budi, dari Marketing Workflow.', $result);
+    }
+
+    public function test_whatsapp_auto_template_falls_back_to_general_then_default(): void
+    {
+        WhatsappTemplate::query()->delete();
+        WhatsappTemplate::create([
+            'nama_template' => 'Umum',
+            'isi_template' => 'Halo {nama_customer}, ada yang bisa dibantu?',
+            'fase' => null,
+            'is_active' => true,
+            'urutan' => 1,
+        ]);
+
+        $this->actingAs($this->marketing);
+        $service = app(\App\Services\FollowUpService::class);
+
+        // Tidak ada template untuk fase 1 → pakai template umum
+        $general = $service->getWhatsAppTemplate($this->lead(['nama_customer' => 'Rina', 'fase_followup' => 1]));
+        $this->assertSame('Halo Rina, ada yang bisa dibantu?', $general);
+
+        // Tidak ada template sama sekali → pakai teks default bawaan
+        WhatsappTemplate::query()->delete();
+        $default = $service->getWhatsAppTemplate($this->lead(['nama_customer' => 'Andi', 'fase_followup' => 0]));
+        $this->assertStringContainsString('Zhafira Villa', $default);
+        $this->assertStringContainsString('Andi', $default);
+    }
+
+    public function test_admin_template_store_validates_fase_range(): void
+    {
+        $admin = User::create([
+            'username' => 'admin-wa',
+            'password' => 'password',
+            'nama_lengkap' => 'Admin WA',
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.whatsapp-templates.store'), [
+            'nama_template' => 'Invalid Fase',
+            'isi_template' => 'test',
+            'fase' => 9,
+        ])->assertSessionHasErrors('fase');
+
+        $this->actingAs($admin)->post(route('admin.whatsapp-templates.store'), [
+            'nama_template' => 'Valid Fase',
+            'isi_template' => 'test {nama_customer}',
+            'fase' => 3,
+        ])->assertRedirect(route('admin.whatsapp-templates.index'));
+
+        $this->assertDatabaseHas('whatsapp_templates', ['nama_template' => 'Valid Fase', 'fase' => 3]);
+    }
+
     private function lead(array $attributes = []): Lead
     {
         return Lead::create(array_merge([

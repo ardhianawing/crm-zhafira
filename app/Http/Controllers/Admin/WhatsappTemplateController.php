@@ -24,16 +24,18 @@ class WhatsappTemplateController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'nama_template' => 'required|string|max:100',
             'isi_template' => 'required|string',
+            'fase' => 'nullable|integer|between:0,3',
         ]);
 
         $maxUrutan = WhatsappTemplate::max('urutan') ?? 0;
 
         WhatsappTemplate::create([
-            'nama_template' => $request->nama_template,
-            'isi_template' => $request->isi_template,
+            'nama_template' => $validated['nama_template'],
+            'isi_template' => $validated['isi_template'],
+            'fase' => $validated['fase'] ?? null,
             'is_active' => true,
             'urutan' => $maxUrutan + 1,
         ]);
@@ -50,14 +52,16 @@ class WhatsappTemplateController extends Controller
 
     public function update(Request $request, WhatsappTemplate $whatsappTemplate): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'nama_template' => 'required|string|max:100',
             'isi_template' => 'required|string',
+            'fase' => 'nullable|integer|between:0,3',
         ]);
 
         $whatsappTemplate->update([
-            'nama_template' => $request->nama_template,
-            'isi_template' => $request->isi_template,
+            'nama_template' => $validated['nama_template'],
+            'isi_template' => $validated['isi_template'],
+            'fase' => $validated['fase'] ?? null,
         ]);
 
         return redirect()

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\StatusProspek;
 use App\Models\Lead;
 use App\Models\LeadHistory;
+use App\Models\WhatsappTemplate;
 use Carbon\Carbon;
 
 class FollowUpService
@@ -67,16 +68,36 @@ class FollowUpService
         return $lead->fresh();
     }
 
+    /**
+     * Template WhatsApp otomatis untuk lead. Sumbernya database (dikelola admin):
+     * cari template aktif untuk fase lead ini, lalu template umum (tanpa fase),
+     * dan hanya jika keduanya tidak ada barulah pakai teks default bawaan.
+     */
     public function getWhatsAppTemplate(Lead $lead): string
     {
-        $templates = [
+        $template = WhatsappTemplate::active()->where('fase', $lead->fase_followup)->ordered()->first()
+            ?? WhatsappTemplate::active()->whereNull('fase')->ordered()->first();
+
+        if ($template) {
+            return $template->renderFor($lead);
+        }
+
+        return $this->defaultTemplate($lead);
+    }
+
+    /**
+     * Teks cadangan bila belum ada satu pun template di database.
+     */
+    private function defaultTemplate(Lead $lead): string
+    {
+        $defaults = [
             0 => "Halo {$lead->nama_customer}, saya dari Zhafira Villa. Terima kasih telah menghubungi kami. Apakah ada yang bisa saya bantu mengenai villa kami?",
             1 => "Halo {$lead->nama_customer}, ini follow-up dari Zhafira Villa. Apakah sudah sempat melihat info villa kami? Ada pertanyaan yang bisa saya bantu?",
             2 => "Halo {$lead->nama_customer}, sekedar mengingatkan mengenai villa kami. Jika berminat, kami sedang ada promo menarik. Silakan hubungi saya untuk info lebih lanjut.",
             3 => "Halo {$lead->nama_customer}, semoga dalam keadaan baik. Jika masih tertarik dengan villa kami, silakan hubungi saya kapan saja. Terima kasih.",
         ];
 
-        return $templates[$lead->fase_followup] ?? $templates[3];
+        return $defaults[$lead->fase_followup] ?? $defaults[3];
     }
 
     public function getNextFollowUpDays(int $fase): ?int

@@ -102,7 +102,7 @@
                             </h2>
                             <div id="template{{ $template->id }}" class="accordion-collapse collapse {{ $index == 0 ? 'show' : '' }}" data-bs-parent="#templateAccordion">
                                 <div class="accordion-body p-2">
-                                    @php $renderedTemplate = str_replace(['{nama_customer}', '{nama_marketing}'], [$lead->nama_customer, auth()->user()->nama_lengkap], $template->isi_template); @endphp
+                                    @php $renderedTemplate = $template->renderFor($lead); @endphp
                                     <pre class="mb-2 p-2 bg-light rounded" style="white-space: pre-wrap; font-family: inherit; font-size: 0.78rem;" id="template-{{ $template->id }}">{{ $renderedTemplate }}</pre>
                                     <div class="d-flex gap-2">
                                         <button type="button" class="btn btn-outline-secondary btn-sm py-0" id="copy-btn-{{ $template->id }}" onclick="copyTemplate({{ $template->id }})" style="font-size: 0.73rem;">

@@ -27,6 +27,20 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="fase" class="form-label">Untuk Fase Follow-up</label>
+                        <select class="form-select @error('fase') is-invalid @enderror" id="fase" name="fase">
+                            <option value="" {{ old('fase') === null ? 'selected' : '' }}>Umum (tidak terikat fase)</option>
+                            @foreach([0,1,2,3] as $f)
+                                <option value="{{ $f }}" {{ (string) old('fase') === (string) $f ? 'selected' : '' }}>Fase {{ $f }}</option>
+                            @endforeach
+                        </select>
+                        @error('fase')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="text-muted">Template ber-fase dipakai otomatis oleh tombol "Chat" saat lead berada di fase tersebut. Hanya boleh ada satu template aktif per fase.</small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="isi_template" class="form-label">Isi Template <span class="text-danger">*</span></label>
                         <textarea class="form-control @error('isi_template') is-invalid @enderror"
                             id="isi_template" name="isi_template" rows="8"
@@ -34,7 +48,8 @@
                         @error('isi_template')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                        <small class="text-muted">Tulis pesan WhatsApp yang akan digunakan untuk follow-up customer.</small>
+                        <small class="text-muted d-block">Tulis pesan WhatsApp untuk follow-up customer.</small>
+                        <small class="text-muted">Placeholder: <code>{nama_customer}</code> dan <code>{nama_marketing}</code> akan otomatis diganti.</small>
                     </div>
 
                     <div class="d-flex gap-2">

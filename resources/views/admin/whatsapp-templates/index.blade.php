@@ -21,6 +21,7 @@
                     <tr style="background-color: #0f3d2e; color: #fff;">
                         <th style="width: 50px; background-color: #0f3d2e; color: #fff; font-weight: 500;">#</th>
                         <th style="background-color: #0f3d2e; color: #fff; font-weight: 500;">Nama Template</th>
+                        <th style="width: 90px; background-color: #0f3d2e; color: #fff; font-weight: 500;">Fase</th>
                         <th style="background-color: #0f3d2e; color: #fff; font-weight: 500;">Preview</th>
                         <th style="width: 100px; background-color: #0f3d2e; color: #fff; font-weight: 500;">Status</th>
                         <th style="width: 150px; background-color: #0f3d2e; color: #fff; font-weight: 500;">Aksi</th>
@@ -31,6 +32,13 @@
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td><strong>{{ $template->nama_template }}</strong></td>
+                        <td>
+                            @if($template->fase !== null)
+                                <span class="badge" style="background-color: #0f3d2e;">Fase {{ $template->fase }}</span>
+                            @else
+                                <span class="badge bg-light text-muted border">Umum</span>
+                            @endif
+                        </td>
                         <td>
                             <small class="text-muted">
                                 {{ Str::limit($template->isi_template, 100) }}
