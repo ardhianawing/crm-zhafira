@@ -4,17 +4,22 @@ namespace App\Services;
 
 use App\Models\Lead;
 use App\Models\LeadHistory;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class LeadAssignmentService
 {
+    public function __construct(
+        private LeadNotificationService $notificationService
+    ) {}
+
     /**
      * Memberikan leads baru ke marketing (Assign Awal).
      * Digunakan untuk lead yang statusnya masih 'New' dan belum punya marketing.
      */
     public function assignBulk(array $leadIds, int $marketingId, int $assignedBy): int
     {
-        return DB::transaction(function () use ($leadIds, $marketingId, $assignedBy) {
+        $count = DB::transaction(function () use ($leadIds, $marketingId, $assignedBy) {
             $count = 0;
             $leads = Lead::whereIn('id', $leadIds)
                 ->whereNull('assigned_to')
@@ -43,6 +48,13 @@ class LeadAssignmentService
             }
             return $count;
         });
+
+        // Notifikasi setelah transaksi commit, satu ringkasan per marketing
+        if ($count > 0 && ($marketing = User::find($marketingId))) {
+            $this->notificationService->notifyBulkAssigned($marketing, $count, 'di-assign');
+        }
+
+        return $count;
     }
 
     /**
@@ -51,7 +63,7 @@ class LeadAssignmentService
      */
     public function transferBulk(array $leadIds, int $toMarketingId, int $performedBy): int
     {
-        return DB::transaction(function () use ($leadIds, $toMarketingId, $performedBy) {
+        $count = DB::transaction(function () use ($leadIds, $toMarketingId, $performedBy) {
             $count = 0;
             $leads = Lead::whereIn('id', $leadIds)->get();
 
@@ -88,5 +100,12 @@ class LeadAssignmentService
 
             return $count;
         });
+
+        // Notifikasi ke marketing penerima operan (setelah commit)
+        if ($count > 0 && ($marketing = User::find($toMarketingId))) {
+            $this->notificationService->notifyBulkAssigned($marketing, $count, 'dioper');
+        }
+
+        return $count;
     }
 }

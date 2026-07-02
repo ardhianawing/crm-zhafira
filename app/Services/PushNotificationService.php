@@ -65,7 +65,10 @@ class PushNotificationService
 
             $webPush = new \Minishlink\WebPush\WebPush($auth);
 
-            $webPush->sendOneNotification(
+            // Library ini TIDAK melempar exception saat push gagal — hasilnya ada
+            // di report. Tanpa memeriksa report, kegagalan jadi sunyi dan
+            // subscription mati tidak pernah dibersihkan.
+            $report = $webPush->sendOneNotification(
                 \Minishlink\WebPush\Subscription::create([
                     'endpoint' => $subscription->endpoint,
                     'publicKey' => $subscription->p256dh,
@@ -73,6 +76,19 @@ class PushNotificationService
                 ]),
                 $payload
             );
+
+            if (!$report->isSuccess()) {
+                Log::warning('Push notification rejected', [
+                    'user_id' => $subscription->user_id,
+                    'reason' => $report->getReason(),
+                    'endpoint' => substr($subscription->endpoint, 0, 60) . '...',
+                ]);
+
+                // 404/410 = endpoint sudah tidak berlaku, hapus agar tidak dikirimi terus
+                if ($report->isSubscriptionExpired()) {
+                    $subscription->delete();
+                }
+            }
 
         } catch (\Exception $e) {
             Log::error('Push notification failed: ' . $e->getMessage());

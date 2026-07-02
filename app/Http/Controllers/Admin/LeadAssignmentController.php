@@ -7,6 +7,7 @@ use App\Models\AppSetting;
 use App\Models\Lead;
 use App\Models\User;
 use App\Services\LeadAssignmentService;
+use App\Services\LeadNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -74,7 +75,7 @@ class LeadAssignmentController extends Controller
         ));
     }
 
-    public function assignSingle(Request $request, Lead $lead)
+    public function assignSingle(Request $request, Lead $lead, LeadNotificationService $notificationService)
     {
         $request->validate([
             'marketing_id' => [
@@ -99,6 +100,10 @@ class LeadAssignmentController extends Controller
             'old_values' => $oldValues,
             'new_values' => $lead->fresh()->toArray(),
         ]);
+
+        if ($marketing = User::find($request->marketing_id)) {
+            $notificationService->notifyLeadAssigned($marketing, $lead->fresh());
+        }
 
         return back()->with('success', 'Lead berhasil di-assign.');
     }

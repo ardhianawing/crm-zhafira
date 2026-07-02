@@ -7,9 +7,8 @@ use App\Models\AppSetting;
 use App\Models\Lead;
 use App\Models\LeadHistory;
 use App\Models\User;
-use App\Services\PushNotificationService;
+use App\Services\LeadNotificationService;
 use App\Services\TelegramService;
-use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -48,40 +47,13 @@ class WebhookController extends Controller
             'assigned_at' => $assignedAt,
         ]);
 
-        // Kirim notifikasi ke marketing yang di-assign
+        // Kirim notifikasi ke marketing yang di-assign (push + telegram + WA bila aktif)
         $waNotifSent = false;
 
         if ($assignedTo && $nextMarketing) {
-            // WA notification (utama)
-            if ($nextMarketing->no_hp) {
-                try {
-                    $waService = new WhatsAppNotificationService();
-                    $waNotifSent = $waService->notifyNewLead(
-                        $nextMarketing->no_hp,
-                        $request->nama,
-                        $request->nomor,
-                        $request->keterangan
-                    );
-                } catch (\Exception $e) {
-                    \Log::error('WA notification failed: ' . $e->getMessage());
-                }
-            }
-
-            // Push notification (browser)
-            try {
-                $pendingCount = Lead::where('assigned_to', $nextMarketing->id)
-                    ->where('fase_followup', 0)
-                    ->count();
-                $pushService = new PushNotificationService();
-                $pushService->sendToUser(
-                    $nextMarketing,
-                    'Zhafira CRM',
-                    "Ada Lead Masuk {$pendingCount} 🔔",
-                    ['url' => '/marketing/tasks/today']
-                );
-            } catch (\Exception $e) {
-                \Log::error('Push notification failed: ' . $e->getMessage());
-            }
+            $results = app(LeadNotificationService::class)
+                ->notifyLeadAssigned($nextMarketing, $lead, viaWhatsApp: true);
+            $waNotifSent = $results['whatsapp'];
         }
 
         return response()->json([
@@ -179,39 +151,12 @@ class WebhookController extends Controller
             ],
         ]);
 
-        // Kirim notifikasi ke marketing yang di-assign
+        // Kirim notifikasi ke marketing yang di-assign (push + telegram + WA bila aktif)
         $waNotifSent = false;
         if ($assignedTo && $nextMarketing) {
-            // WA notification (utama)
-            if ($nextMarketing->no_hp) {
-                try {
-                    $waService = new WhatsAppNotificationService();
-                    $waNotifSent = $waService->notifyNewLead(
-                        $nextMarketing->no_hp,
-                        $request->nama,
-                        $phone,
-                        $request->pesan
-                    );
-                } catch (\Exception $e) {
-                    \Log::error('WA notification failed: ' . $e->getMessage());
-                }
-            }
-
-            // Push notification (browser)
-            try {
-                $pendingCount = Lead::where('assigned_to', $nextMarketing->id)
-                    ->where('fase_followup', 0)
-                    ->count();
-                $pushService = new PushNotificationService();
-                $pushService->sendToUser(
-                    $nextMarketing,
-                    'Zhafira CRM',
-                    "Ada Lead Masuk {$pendingCount} 🔔",
-                    ['url' => '/marketing/tasks/today']
-                );
-            } catch (\Exception $e) {
-                \Log::error('Push notification failed: ' . $e->getMessage());
-            }
+            $results = app(LeadNotificationService::class)
+                ->notifyLeadAssigned($nextMarketing, $lead, viaWhatsApp: true);
+            $waNotifSent = $results['whatsapp'];
         }
 
         // Kirim ke Google Sheets

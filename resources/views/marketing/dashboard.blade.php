@@ -3,6 +3,15 @@
 @section('title', 'Dashboard - Zhafira CRM')
 
 @section('content')
+{{-- Banner ajakan aktifkan push — hanya muncul bila device ini belum subscribe --}}
+<div class="alert alert-info py-2 px-3 mb-3 d-none align-items-center justify-content-between flex-wrap gap-2"
+    id="enablePushBanner" style="font-size: 0.82rem; border-left: 4px solid #0dcaf0;">
+    <span><i class="bi bi-bell me-1"></i> Notifikasi lead baru belum aktif di perangkat ini.</span>
+    <button type="button" class="btn btn-sm btn-info text-white" id="enablePushBtn">
+        <i class="bi bi-bell-fill"></i> Aktifkan Notifikasi
+    </button>
+</div>
+
 @if($todayTasksCount > 0)
 <div class="alert alert-warning alert-dismissible fade show py-2 px-3 mb-3" role="alert" style="font-size: 0.82rem; border-left: 4px solid #ffc107;">
     <i class="bi bi-bell-fill me-1"></i>
@@ -208,3 +217,42 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const banner = document.getElementById('enablePushBanner');
+    const btn = document.getElementById('enablePushBtn');
+    if (!banner || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    async function checkSubscription() {
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            const denied = Notification.permission === 'denied';
+            if (!sub && !denied) {
+                banner.classList.remove('d-none');
+                banner.classList.add('d-flex');
+            } else {
+                banner.classList.add('d-none');
+                banner.classList.remove('d-flex');
+            }
+        } catch (e) { /* abaikan */ }
+    }
+
+    btn?.addEventListener('click', async function () {
+        btn.disabled = true;
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            // subscribeToPush didefinisikan global di layout
+            await subscribeToPush(reg);
+        } finally {
+            btn.disabled = false;
+            checkSubscription();
+        }
+    });
+
+    checkSubscription();
+});
+</script>
+@endpush

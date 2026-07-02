@@ -124,6 +124,50 @@ class LeadAssignmentFilterTest extends TestCase
         $this->assertSame(2, LeadHistory::where('action', 'assigned')->count());
     }
 
+    public function test_manual_assignments_send_notifications(): void
+    {
+        $lead = Lead::create([
+            'nama_customer' => 'Notif Single',
+            'no_hp' => '628511111111',
+            'status_prospek' => 'New',
+        ]);
+
+        $bulkLead = Lead::create([
+            'nama_customer' => 'Notif Bulk',
+            'no_hp' => '628522222222',
+            'status_prospek' => 'New',
+        ]);
+
+        $mock = $this->mock(\App\Services\LeadNotificationService::class);
+        $mock->shouldReceive('notifyLeadAssigned')->once()->andReturn(['push' => true, 'telegram' => false, 'whatsapp' => false]);
+        $mock->shouldReceive('notifyBulkAssigned')->twice(); // assign bulk + transfer bulk
+
+        // Assign satuan → notifikasi per-lead
+        $this->actingAs($this->admin)
+            ->post(route('admin.assignment.single', $lead), ['marketing_id' => $this->marketing->id])
+            ->assertRedirect();
+
+        // Assign massal → satu notifikasi ringkasan
+        $this->actingAs($this->admin)->post(route('admin.assignment.bulk'), [
+            'lead_ids' => [$bulkLead->id],
+            'marketing_id' => $this->marketing->id,
+        ])->assertRedirect();
+
+        // Transfer → notifikasi ke penerima operan
+        $other = User::create([
+            'username' => 'marketing-notif',
+            'password' => 'password',
+            'nama_lengkap' => 'Marketing Notif',
+            'role' => 'marketing',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin)->post(route('admin.assignment.transfer'), [
+            'lead_ids' => [$bulkLead->id],
+            'marketing_id' => $other->id,
+        ])->assertRedirect();
+    }
+
     public function test_index_filters_assigned_leads_by_status_and_search(): void
     {
         $matching = Lead::create([
