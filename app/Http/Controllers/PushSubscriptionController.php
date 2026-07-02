@@ -51,7 +51,9 @@ class PushSubscriptionController extends Controller
             'endpoint' => 'required|url',
         ]);
 
-        PushSubscription::where('endpoint', $request->endpoint)->delete();
+        PushSubscription::where('endpoint', $request->endpoint)
+            ->where('user_id', auth()->id())
+            ->delete();
 
         return response()->json(['message' => 'Unsubscribed successfully']);
     }

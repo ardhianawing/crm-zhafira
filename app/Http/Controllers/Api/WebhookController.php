@@ -18,7 +18,7 @@ class WebhookController extends Controller
     // Terima data satu per satu dari Sheets
     public function handleGoogleSheets(Request $request)
     {
-        if ($request->secret !== config('app.webhook_secret')) {
+        if (!$this->hasValidSecret($request)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -96,7 +96,7 @@ class WebhookController extends Controller
     // Terima banyak data sekaligus dari Sheets
     public function handleBulkGoogleSheets(Request $request)
     {
-        if ($request->secret !== config('app.webhook_secret')) {
+        if (!$this->hasValidSecret($request)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -129,7 +129,7 @@ class WebhookController extends Controller
     // Terima data dari WhatsApp Bot
     public function handleWhatsApp(Request $request)
     {
-        if ($request->secret !== config('app.webhook_secret')) {
+        if (!$this->hasValidSecret($request)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -256,7 +256,7 @@ class WebhookController extends Controller
     // Get active marketing numbers for WA Bot forwarding
     public function getMarketingNumbers(Request $request)
     {
-        if ($request->secret !== config('app.webhook_secret')) {
+        if (!$this->hasValidSecret($request)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -275,7 +275,7 @@ class WebhookController extends Controller
     // Handle Telegram Bot webhook (auto-reply)
     public function handleTelegram(Request $request)
     {
-        if ($request->secret !== config('app.webhook_secret')) {
+        if (!$this->hasValidSecret($request)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -309,5 +309,13 @@ class WebhookController extends Controller
         $telegram->sendMessage((string)$chatId, $reply);
 
         return response()->json(['ok' => true]);
+    }
+
+    private function hasValidSecret(Request $request): bool
+    {
+        $secret = (string) config('app.webhook_secret', '');
+
+        // Tolak juga saat secret belum dikonfigurasi — jangan sampai webhook terbuka tanpa auth
+        return $secret !== '' && hash_equals($secret, (string) $request->secret);
     }
 }

@@ -12,13 +12,15 @@ class WhatsAppNotificationService
 
     public function __construct()
     {
-        $this->botUrl = config('app.wa_bot_url', 'http://202.10.47.91:3001');
+        // Tanpa fallback hardcoded: kalau WA_BOT_URL tidak di-set, notifikasi WA
+        // dinonaktifkan (bot lama di VPS yang sudah pensiun jangan dikirimi data)
+        $this->botUrl = (string) config('app.wa_bot_url', '');
         $this->secret = config('app.webhook_secret', '');
     }
 
     public function notifyNewLead(string $marketingPhone, string $namaCustomer, string $noHp, ?string $pesan = null): bool
     {
-        if ($marketingPhone === '' || $this->secret === '') {
+        if ($marketingPhone === '' || $this->secret === '' || $this->botUrl === '') {
             return false;
         }
 

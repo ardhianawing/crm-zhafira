@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AppSetting extends Model
 {
@@ -46,29 +47,36 @@ class AppSetting extends Model
      */
     public static function getNextMarketingForRotation(): ?User
     {
-        $lastAssignedId = (int) static::getValue('last_assigned_marketing_id', 0);
+        // Transaksi + lockForUpdate: dua webhook yang masuk bersamaan tidak boleh
+        // membaca last_assigned_marketing_id yang sama (round-robin jadi tidak adil)
+        return DB::transaction(function () {
+            $setting = static::query()
+                ->where('key', 'last_assigned_marketing_id')
+                ->lockForUpdate()
+                ->first();
 
-        // Get all active marketing users ordered by ID
-        $marketingUsers = User::where('role', 'marketing')
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->get();
+            $lastAssignedId = (int) ($setting->value ?? 0);
 
-        if ($marketingUsers->isEmpty()) {
-            return null;
-        }
+            $marketingUsers = User::where('role', 'marketing')
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->get();
 
-        // Find the next marketing user after the last assigned one
-        $nextUser = $marketingUsers->where('id', '>', $lastAssignedId)->first();
+            if ($marketingUsers->isEmpty()) {
+                return null;
+            }
 
-        // If no user found after last assigned, wrap around to first user
-        if (!$nextUser) {
-            $nextUser = $marketingUsers->first();
-        }
+            // Find the next marketing user after the last assigned one
+            $nextUser = $marketingUsers->where('id', '>', $lastAssignedId)->first();
 
-        // Update last assigned marketing ID
-        static::setValue('last_assigned_marketing_id', $nextUser->id);
+            // If no user found after last assigned, wrap around to first user
+            if (!$nextUser) {
+                $nextUser = $marketingUsers->first();
+            }
 
-        return $nextUser;
+            static::setValue('last_assigned_marketing_id', $nextUser->id);
+
+            return $nextUser;
+        });
     }
 }

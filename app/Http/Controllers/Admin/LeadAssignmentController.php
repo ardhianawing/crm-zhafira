@@ -20,6 +20,9 @@ class LeadAssignmentController extends Controller
             'status_filter' => ['nullable', Rule::in(['New', 'Cold', 'Warm', 'Hot', 'Deal'])],
             'source_filter' => ['nullable', 'string', 'max:50'],
             'search' => ['nullable', 'string', 'max:100'],
+            'marketing_filter' => ['nullable', 'integer', 'exists:users,id'],
+            'assigned_status' => ['nullable', Rule::in(['New', 'Cold', 'Warm', 'Hot', 'Deal'])],
+            'assigned_search' => ['nullable', 'string', 'max:100'],
         ]);
 
         $marketingUsers = User::where('role', 'marketing')
@@ -41,8 +44,18 @@ class LeadAssignmentController extends Controller
 
         $assignedLeads = Lead::whereNotNull('assigned_to')
             ->with('assignedUser')
-            ->when($request->marketing_filter, function ($query) use ($request) {
-                return $query->where('assigned_to', $request->marketing_filter);
+            ->when($filters['marketing_filter'] ?? null, function (Builder $query, $marketingId) {
+                $query->where('assigned_to', $marketingId);
+            })
+            ->when($filters['assigned_status'] ?? null, function (Builder $query, string $status) {
+                $query->where('status_prospek', $status);
+            })
+            ->when($filters['assigned_search'] ?? null, function (Builder $query, string $search) {
+                $query->where(function (Builder $searchQuery) use ($search) {
+                    $searchQuery
+                        ->where('nama_customer', 'like', "%{$search}%")
+                        ->orWhere('no_hp', 'like', "%{$search}%");
+                });
             })
             ->orderByRaw("CASE WHEN status_prospek = 'Hot' THEN 0 ELSE 1 END")
             ->orderBy('assigned_at', 'desc')
@@ -72,9 +85,19 @@ class LeadAssignmentController extends Controller
             ],
         ]);
 
+        $oldValues = $lead->toArray();
+        $wasAssigned = $lead->assigned_to !== null;
+
         $lead->update([
             'assigned_to' => $request->marketing_id,
             'assigned_at' => now(),
+        ]);
+
+        $lead->histories()->create([
+            'user_id' => auth()->id(),
+            'action' => $wasAssigned ? 'transferred' : 'assigned',
+            'old_values' => $oldValues,
+            'new_values' => $lead->fresh()->toArray(),
         ]);
 
         return back()->with('success', 'Lead berhasil di-assign.');
@@ -110,21 +133,26 @@ class LeadAssignmentController extends Controller
         return back()->with('success', $assignedCount . ' lead berhasil di-assign.');
     }
 
-    public function transferBulk(Request $request)
+    public function transferBulk(Request $request, LeadAssignmentService $assignmentService)
     {
         $request->validate([
             'lead_ids' => 'required|array',
             'lead_ids.*' => 'integer|exists:leads,id',
-            'marketing_id' => 'required|exists:users,id',
+            'marketing_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'marketing')
+                    ->where('is_active', true)),
+            ],
         ]);
 
-        Lead::whereIn('id', $request->lead_ids)
-            ->update([
-                'assigned_to' => $request->marketing_id,
-                'assigned_at' => now(),
-            ]);
+        $transferredCount = $assignmentService->transferBulk(
+            $request->lead_ids,
+            (int) $request->marketing_id,
+            (int) auth()->id()
+        );
 
-        return back()->with('success', count($request->lead_ids) . ' lead berhasil ditransfer.');
+        return back()->with('success', $transferredCount . ' lead berhasil ditransfer.');
     }
 
     public function deleteBulk(Request $request)

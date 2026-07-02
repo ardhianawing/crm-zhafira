@@ -29,6 +29,9 @@
                 <div class="card-body p-0">
                     <form action="{{ route('admin.assignment.index') }}" method="GET" class="p-2 p-md-3 border-bottom bg-light">
                         <input type="hidden" name="per_page" value="{{ $perPage }}">
+                        <input type="hidden" name="marketing_filter" value="{{ request('marketing_filter') }}">
+                        <input type="hidden" name="assigned_status" value="{{ request('assigned_status') }}">
+                        <input type="hidden" name="assigned_search" value="{{ request('assigned_search') }}">
                         <div class="row g-2">
                             <div class="col-6 col-md-3">
                                 <label for="statusFilter" class="form-label small fw-bold mb-1">Status</label>
@@ -108,8 +111,12 @@
                                 </div>
                             </div>
                         </div>
+                    </form>
 
-                        @if($unassignedLeads->count() > 0)
+                    {{-- Tabel sengaja di luar #bulkAssignForm (checkbox terhubung via atribut form="")
+                         agar form assign per-baris tidak menjadi nested form — nested form membuat
+                         browser men-submit form bulk, sehingga lead ter-assign ke marketing yang salah --}}
+                    @if($unassignedLeads->count() > 0)
                             <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="sticky-top" style="top: 0;">
@@ -125,7 +132,7 @@
                                             <tr class="small-mobile-row">
                                                 <td class="ps-2 ps-md-3">
                                                     <input class="form-check-input unassigned-checkbox" type="checkbox"
-                                                        name="lead_ids[]" value="{{ $lead->id }}">
+                                                        name="lead_ids[]" value="{{ $lead->id }}" form="bulkAssignForm">
                                                 </td>
                                                 <td>
                                                     <div class="fw-bold text-truncate" style="max-width: 150px;">{{ $lead->nama_customer }}</div>
@@ -174,7 +181,6 @@
                                 <p>Semua lead baru sudah di-assign!</p>
                             </div>
                         @endif
-                    </form>
                 </div>
             </div>
         </div>
@@ -226,20 +232,54 @@
                             <h6 class="mb-0 fw-bold small-mobile">
                                 <i class="bi bi-person-check-fill text-success me-1 me-md-2"></i> Terdistribusi
                             </h6>
-                            <form action="{{ route('admin.assignment.index') }}" method="GET" class="d-flex gap-2">
-                                <input type="hidden" name="per_page" value="{{ $perPage }}">
-                                <select name="marketing_filter" class="form-select form-select-sm" style="min-width: 140px;"
-                                    onchange="this.form.submit()">
-                                    <option value="">Semua Marketing</option>
-                                    @foreach($marketingUsers as $user)
-                                        <option value="{{ $user->id }}" {{ request('marketing_filter') == $user->id ? 'selected' : '' }}>
-                                            {{ $user->nama_lengkap }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </form>
                         </div>
                         <div class="card-body p-0">
+                            <form action="{{ route('admin.assignment.index') }}" method="GET"
+                                class="p-2 p-md-3 border-bottom bg-light">
+                                <input type="hidden" name="per_page" value="{{ $perPage }}">
+                                <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
+                                <input type="hidden" name="source_filter" value="{{ request('source_filter') }}">
+                                <input type="hidden" name="search" value="{{ request('search') }}">
+                                <div class="row g-2">
+                                    <div class="col-6 col-md-3">
+                                        <label for="assignedMarketingFilter" class="form-label small fw-bold mb-1">Marketing</label>
+                                        <select id="assignedMarketingFilter" name="marketing_filter" class="form-select form-select-sm">
+                                            <option value="">Semua</option>
+                                            @foreach($marketingUsers as $user)
+                                                <option value="{{ $user->id }}" {{ request('marketing_filter') == $user->id ? 'selected' : '' }}>
+                                                    {{ $user->nama_lengkap }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label for="assignedStatusFilter" class="form-label small fw-bold mb-1">Status</label>
+                                        <select id="assignedStatusFilter" name="assigned_status" class="form-select form-select-sm">
+                                            <option value="">Semua status</option>
+                                            @foreach(['New', 'Cold', 'Warm', 'Hot', 'Deal'] as $status)
+                                                <option value="{{ $status }}" {{ request('assigned_status') === $status ? 'selected' : '' }}>
+                                                    {{ $status }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label for="assignedSearch" class="form-label small fw-bold mb-1">Cari lead</label>
+                                        <input id="assignedSearch" type="search" name="assigned_search"
+                                            value="{{ request('assigned_search') }}" class="form-control form-control-sm"
+                                            placeholder="Nama atau nomor HP">
+                                    </div>
+                                    <div class="col-12 col-md-2 d-flex align-items-end gap-1">
+                                        <button type="submit" class="btn btn-sm btn-dark flex-grow-1">
+                                            <i class="bi bi-funnel"></i> Filter
+                                        </button>
+                                        <a href="{{ route('admin.assignment.index', ['per_page' => $perPage]) }}"
+                                            class="btn btn-sm btn-outline-secondary" title="Reset filter">
+                                            <i class="bi bi-x-lg"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
                             <div class="p-2 p-md-3 bg-light border-bottom">
                                 <div class="d-flex flex-wrap gap-1 gap-md-2 align-items-center">
                                     <div class="form-check me-1 me-md-2 p-0 d-flex align-items-center">
@@ -385,6 +425,8 @@
                 <input type="hidden" name="status_filter" value="{{ request('status_filter') }}">
                 <input type="hidden" name="source_filter" value="{{ request('source_filter') }}">
                 <input type="hidden" name="search" value="{{ request('search') }}">
+                <input type="hidden" name="assigned_status" value="{{ request('assigned_status') }}">
+                <input type="hidden" name="assigned_search" value="{{ request('assigned_search') }}">
                 <span class="text-muted small fw-bold">Tampilkan:</span>
                 <select name="per_page" onchange="this.form.submit()" class="form-select form-select-sm"
                     style="width: auto;">

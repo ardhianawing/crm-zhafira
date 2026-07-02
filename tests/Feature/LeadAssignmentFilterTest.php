@@ -123,4 +123,77 @@ class LeadAssignmentFilterTest extends TestCase
 
         $this->assertSame(2, LeadHistory::where('action', 'assigned')->count());
     }
+
+    public function test_index_filters_assigned_leads_by_status_and_search(): void
+    {
+        $matching = Lead::create([
+            'nama_customer' => 'Andi Hot',
+            'no_hp' => '628311111111',
+            'status_prospek' => 'Hot',
+            'assigned_to' => $this->marketing->id,
+            'assigned_at' => now(),
+        ]);
+
+        Lead::create([
+            'nama_customer' => 'Andi Cold',
+            'no_hp' => '628322222222',
+            'status_prospek' => 'Cold',
+            'assigned_to' => $this->marketing->id,
+            'assigned_at' => now(),
+        ]);
+
+        Lead::create([
+            'nama_customer' => 'Rina Hot',
+            'no_hp' => '628333333333',
+            'status_prospek' => 'Hot',
+            'assigned_to' => $this->marketing->id,
+            'assigned_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.assignment.index', [
+            'assigned_status' => 'Hot',
+            'assigned_search' => 'Andi',
+        ]));
+
+        $response->assertOk();
+        $response->assertViewHas('assignedLeads', function ($leads) use ($matching) {
+            return $leads->total() === 1
+                && $leads->first()->is($matching);
+        });
+    }
+
+    public function test_single_assign_records_history_and_transfer_bulk_uses_service(): void
+    {
+        $otherMarketing = User::create([
+            'username' => 'marketing-two',
+            'password' => 'password',
+            'nama_lengkap' => 'Marketing Two',
+            'role' => 'marketing',
+            'is_active' => true,
+        ]);
+
+        $lead = Lead::create([
+            'nama_customer' => 'Lead Single',
+            'no_hp' => '628344444444',
+            'status_prospek' => 'New',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.assignment.single', $lead), ['marketing_id' => $this->marketing->id])
+            ->assertRedirect();
+
+        $this->assertSame($this->marketing->id, $lead->fresh()->assigned_to);
+        $this->assertSame(1, LeadHistory::where('lead_id', $lead->id)->where('action', 'assigned')->count());
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.assignment.transfer'), [
+                'lead_ids' => [$lead->id],
+                'marketing_id' => $otherMarketing->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', '1 lead berhasil ditransfer.');
+
+        $this->assertSame($otherMarketing->id, $lead->fresh()->assigned_to);
+        $this->assertSame(1, LeadHistory::where('lead_id', $lead->id)->where('action', 'transferred')->count());
+    }
 }

@@ -9,23 +9,25 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Google Sheets Webhook
-Route::post('/webhook/google-sheets', [WebhookController::class, 'handleGoogleSheets'])
-    ->name('webhook.google-sheets');
+Route::middleware('throttle:60,1')->group(function () {
+    // Google Sheets Webhook
+    Route::post('/webhook/google-sheets', [WebhookController::class, 'handleGoogleSheets'])
+        ->name('webhook.google-sheets');
 
-// Bulk import from Google Sheets
-Route::post('/webhook/google-sheets/bulk', [WebhookController::class, 'handleBulkGoogleSheets'])
-    ->name('webhook.google-sheets.bulk');
+    // Bulk import from Google Sheets
+    Route::post('/webhook/google-sheets/bulk', [WebhookController::class, 'handleBulkGoogleSheets'])
+        ->name('webhook.google-sheets.bulk');
 
-// WhatsApp Webhook
-Route::post('/webhook/whatsapp', [WebhookController::class, 'handleWhatsApp'])
-    ->name('webhook.whatsapp');
+    // WhatsApp Webhook
+    Route::post('/webhook/whatsapp', [WebhookController::class, 'handleWhatsApp'])
+        ->name('webhook.whatsapp');
 
-// Get marketing numbers for WA Bot
-Route::post('/webhook/marketing-numbers', [WebhookController::class, 'getMarketingNumbers'])
-    ->name('webhook.marketing-numbers');
+    // Get marketing numbers for WA Bot
+    Route::post('/webhook/marketing-numbers', [WebhookController::class, 'getMarketingNumbers'])
+        ->name('webhook.marketing-numbers');
 
-// Telegram Bot Webhook (auto-reply)
-Route::post('/webhook/telegram', [WebhookController::class, 'handleTelegram'])
-    ->name('webhook.telegram');
+    // Telegram Bot Webhook (auto-reply)
+    Route::post('/webhook/telegram', [WebhookController::class, 'handleTelegram'])
+        ->name('webhook.telegram');
+});
 
