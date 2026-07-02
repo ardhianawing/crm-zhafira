@@ -20,33 +20,77 @@
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <form action="{{ route('admin.leads.index') }}" method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-                    <div class="d-flex align-items-center gap-2 bg-light px-3 py-1 rounded border">
-                        <span class="small fw-bold text-nowrap">Tampilkan:</span>
-                        <select name="per_page" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width: 100px;" onchange="this.form.submit()">
-                            @foreach([50, 100, 500, 1000] as $value)
-                                <option value="{{ $value }}" {{ $perPage == $value ? 'selected' : '' }}>{{ $value }} Baris</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="input-group input-group-sm" style="width: 250px;">
-                        <input type="text" name="search" class="form-control" placeholder="Cari nama/hp..." value="{{ request('search') }}">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
-                    </div>
-                    <input type="hidden" name="duplicates" value="0">
+        <form action="{{ route('admin.leads.index') }}" method="GET">
+            <input type="hidden" name="duplicates" value="0">
+            <div class="row g-2 align-items-end">
+                <div class="col-6 col-md-2">
+                    <label for="filterStatus" class="form-label small fw-bold mb-1">Status</label>
+                    <select id="filterStatus" name="status_filter" class="form-select form-select-sm">
+                        <option value="">Semua status</option>
+                        @foreach($statuses as $status)
+                            <option value="{{ $status->value }}" {{ request('status_filter') === $status->value ? 'selected' : '' }}>
+                                {{ $status->label() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="filterSource" class="form-label small fw-bold mb-1">Sumber</label>
+                    <select id="filterSource" name="source_filter" class="form-select form-select-sm">
+                        <option value="">Semua sumber</option>
+                        @foreach($leadSources as $source)
+                            <option value="{{ $source }}" {{ request('source_filter') === $source ? 'selected' : '' }}>
+                                {{ $source }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="filterMarketing" class="form-label small fw-bold mb-1">Marketing</label>
+                    <select id="filterMarketing" name="marketing_filter" class="form-select form-select-sm">
+                        <option value="">Semua</option>
+                        <option value="unassigned" {{ request('marketing_filter') === 'unassigned' ? 'selected' : '' }}>
+                            Belum di-assign
+                        </option>
+                        @foreach($marketingUsers as $user)
+                            <option value="{{ $user->id }}" {{ request('marketing_filter') == $user->id ? 'selected' : '' }}>
+                                {{ $user->nama_lengkap }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="filterSearch" class="form-label small fw-bold mb-1">Cari lead</label>
+                    <input id="filterSearch" type="search" name="search" class="form-control form-control-sm"
+                        placeholder="Nama atau nomor HP" value="{{ request('search') }}">
+                </div>
+                <div class="col-12 col-md-3 d-flex align-items-end gap-1 flex-wrap">
+                    <button type="submit" class="btn btn-sm btn-dark">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <a href="{{ route('admin.leads.index', ['per_page' => $perPage]) }}"
+                        class="btn btn-sm btn-outline-secondary" title="Reset filter">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
                     <label class="btn btn-sm {{ request()->boolean('duplicates') ? 'btn-warning' : 'btn-outline-warning' }}">
                         <input class="visually-hidden" type="checkbox" name="duplicates" value="1"
                                onchange="this.form.submit()" {{ request()->boolean('duplicates') ? 'checked' : '' }}>
-                        <i class="bi bi-files"></i> Hanya Duplikat
+                        <i class="bi bi-files"></i> Duplikat
                     </label>
-                </form>
+                </div>
             </div>
-            <div class="col-md-6 text-md-end">
-                <span class="text-muted small">Menampilkan {{ $leads->firstItem() }} - {{ $leads->lastItem() }} dari {{ $leads->total() }} data</span>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2 pt-2 border-top">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small fw-bold text-nowrap">Tampilkan:</span>
+                    <select name="per_page" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                        @foreach([50, 100, 500, 1000] as $value)
+                            <option value="{{ $value }}" {{ $perPage == $value ? 'selected' : '' }}>{{ $value }} Baris</option>
+                        @endforeach
+                    </select>
+                </div>
+                <span class="text-muted small">Menampilkan {{ $leads->firstItem() ?? 0 }} - {{ $leads->lastItem() ?? 0 }} dari {{ $leads->total() }} data</span>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 

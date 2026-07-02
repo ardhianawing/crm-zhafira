@@ -7,6 +7,7 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Enums\StatusProspek;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -15,21 +16,52 @@ class LeadController extends Controller
     public function index(Request $request)
     {
         $perPage = min((int) $request->input('per_page', 50), 1000);
-        
+
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status_filter' => ['nullable', Rule::in(StatusProspek::values())],
+            'source_filter' => ['nullable', 'string', 'max:50'],
+            // id user marketing, atau 'unassigned' untuk lead yang belum dibagikan
+            'marketing_filter' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $marketingFilter = $filters['marketing_filter'] ?? null;
+
         $leads = Lead::with('assignedUser')
             ->withCount('duplicateMatches')
-            ->when($request->search, function($query, $search) {
+            ->when($filters['search'] ?? null, function($query, $search) {
                 return $query->where(function ($query) use ($search) {
                     $query->where('nama_customer', 'like', "%{$search}%")
                         ->orWhere('no_hp', 'like', "%{$search}%");
                 });
+            })
+            ->when($filters['status_filter'] ?? null, function ($query, $status) {
+                $query->where('status_prospek', $status);
+            })
+            ->when($filters['source_filter'] ?? null, function ($query, $source) {
+                $query->where('sumber_lead', $source);
+            })
+            ->when($marketingFilter === 'unassigned', function ($query) {
+                $query->whereNull('assigned_to');
+            })
+            ->when($marketingFilter !== null && ctype_digit($marketingFilter), function ($query) use ($marketingFilter) {
+                $query->where('assigned_to', (int) $marketingFilter);
             })
             ->when($request->boolean('duplicates'), fn ($query) => $query->duplicates())
             ->orderBy('created_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
-        return view('admin.leads.index', compact('leads', 'perPage'));
+        $statuses = StatusProspek::cases();
+        $marketingUsers = User::marketing()->active()->orderBy('nama_lengkap')->get();
+        $leadSources = Lead::query()
+            ->whereNotNull('sumber_lead')
+            ->where('sumber_lead', '!=', '')
+            ->distinct()
+            ->orderBy('sumber_lead')
+            ->pluck('sumber_lead');
+
+        return view('admin.leads.index', compact('leads', 'perPage', 'statuses', 'marketingUsers', 'leadSources'));
     }
 
     public function create()
