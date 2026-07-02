@@ -76,7 +76,7 @@ class LeadController extends Controller
         $validated = $request->validate([
             'nama_customer' => 'required|string|max:255',
             'no_hp' => 'required|string|max:20',
-            'status_prospek' => 'required|string',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
             'assigned_to' => 'nullable|exists:users,id',
             'fase_followup' => 'nullable|integer',
             'tgl_next_followup' => 'nullable|date',
@@ -117,7 +117,7 @@ class LeadController extends Controller
         $validated = $request->validate([
             'nama_customer' => 'required|string|max:255',
             'no_hp' => 'required|string|max:20',
-            'status_prospek' => 'required|string',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
             'assigned_to' => 'nullable|exists:users,id',
             'fase_followup' => 'nullable|integer',
             'tgl_next_followup' => 'nullable|date',
@@ -170,7 +170,7 @@ class LeadController extends Controller
 
     public function updateStatus(Request $request, Lead $lead)
     {
-        $request->validate(['status' => 'required|string']);
+        $request->validate(['status' => ['required', Rule::enum(StatusProspek::class)]]);
         $oldStatus = $lead->status_prospek->value ?? $lead->status_prospek;
         $lead->update(['status_prospek' => $request->status]);
 

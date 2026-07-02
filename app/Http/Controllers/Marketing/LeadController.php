@@ -22,6 +22,7 @@ class LeadController extends Controller
         $source = $request->filled('source') ? trim($request->source) : null;
 
         $leads = Lead::assignedTo($userId)
+            ->withCount(['histories as transferred_histories_count' => fn ($query) => $query->where('action', 'transferred')])
             ->when($request->search, function ($query, $search) {
                 return $query->where(function($q) use ($search) {
                     $q->where('nama_customer', 'like', "%{$search}%")
@@ -61,7 +62,9 @@ class LeadController extends Controller
         $validated = $request->validate([
             'nama_customer' => 'required|string|max:255',
             'no_hp' => 'required|string|max:20',
-            'status_prospek' => 'required|string',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
+            'sumber_lead' => 'nullable|string|max:50',
+            'keterangan' => 'nullable|string',
             'catatan_terakhir' => 'nullable|string',
         ]);
 
@@ -135,7 +138,7 @@ class LeadController extends Controller
         $validated = $request->validate([
             'nama_customer' => 'required|string|max:255',
             'no_hp' => 'required|string|max:20',
-            'status_prospek' => 'required|string',
+            'status_prospek' => ['required', Rule::enum(StatusProspek::class)],
             'catatan_terakhir' => 'nullable|string',
         ]);
 

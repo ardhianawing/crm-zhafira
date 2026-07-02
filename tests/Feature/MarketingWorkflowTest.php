@@ -167,6 +167,87 @@ class MarketingWorkflowTest extends TestCase
         $response->assertSee('Tidak Berminat');
     }
 
+    public function test_closing_lead_as_deal_stops_the_followup_cycle(): void
+    {
+        $lead = $this->lead([
+            'nama_customer' => 'Closing Deal',
+            'fase_followup' => 1,
+            'tgl_next_followup' => now(),
+        ]);
+
+        $response = $this->actingAs($this->marketing)->postJson(
+            route('marketing.tasks.complete', $lead),
+            [
+                'status_prospek' => 'Deal',
+                'catatan' => 'Customer setuju.',
+            ]
+        );
+
+        $response->assertOk()->assertJson(['success' => true]);
+        $fresh = $lead->fresh();
+        $this->assertSame(1, $fresh->fase_followup, 'Fase tidak boleh naik saat lead ditutup');
+        $this->assertNull($fresh->tgl_next_followup, 'Lead yang deal tidak boleh punya jadwal follow-up');
+        $this->assertSame('Deal', $fresh->status_prospek->value);
+    }
+
+    public function test_closing_lead_as_not_interested_stops_the_followup_cycle(): void
+    {
+        $lead = $this->lead([
+            'fase_followup' => 0,
+            'tgl_next_followup' => now(),
+        ]);
+
+        $this->actingAs($this->marketing)->postJson(
+            route('marketing.tasks.complete', $lead),
+            ['status_prospek' => 'Tidak Berminat']
+        )->assertOk();
+
+        $fresh = $lead->fresh();
+        $this->assertSame(0, $fresh->fase_followup);
+        $this->assertNull($fresh->tgl_next_followup);
+    }
+
+    public function test_marketing_store_rejects_invalid_status_and_accepts_source(): void
+    {
+        $this->actingAs($this->marketing)->post(route('marketing.leads.store'), [
+            'nama_customer' => 'Lead Invalid',
+            'no_hp' => '628100000000',
+            'status_prospek' => 'BukanStatus',
+        ])->assertSessionHasErrors('status_prospek');
+
+        $this->actingAs($this->marketing)->post(route('marketing.leads.store'), [
+            'nama_customer' => 'Lead Valid',
+            'no_hp' => '628100000001',
+            'status_prospek' => 'New',
+            'sumber_lead' => 'Pameran',
+            'keterangan' => 'Ketemu di pameran properti',
+        ])->assertRedirect(route('marketing.leads.index'));
+
+        $this->assertDatabaseHas('leads', [
+            'nama_customer' => 'Lead Valid',
+            'sumber_lead' => 'Pameran',
+            'keterangan' => 'Ketemu di pameran properti',
+            'assigned_to' => $this->marketing->id,
+        ]);
+    }
+
+    public function test_leads_index_avoids_n_plus_one_on_transferred_badge(): void
+    {
+        $this->lead(['nama_customer' => 'A']);
+        $this->lead(['nama_customer' => 'B']);
+        $this->lead(['nama_customer' => 'C']);
+
+        $response = $this->actingAs($this->marketing)->get(route('marketing.leads.index'));
+
+        $response->assertOk();
+        // withCount harus menyuntikkan atribut agregat, bukan memicu query per-baris
+        $response->assertViewHas('leads', function ($leads) {
+            return $leads->getCollection()->every(
+                fn ($lead) => array_key_exists('transferred_histories_count', $lead->getAttributes())
+            );
+        });
+    }
+
     private function lead(array $attributes = []): Lead
     {
         return Lead::create(array_merge([

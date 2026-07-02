@@ -30,7 +30,11 @@
         <li><h6 class="dropdown-header py-1" style="font-size: 0.7rem;">Pilih Template</h6></li>
         @foreach($waTemplates as $tpl)
         @php
-            $rendered = str_replace('{nama_customer}', $lead->nama_customer, $tpl->isi_template);
+            $rendered = str_replace(
+                ['{nama_customer}', '{nama_marketing}'],
+                [$lead->nama_customer, auth()->user()->nama_lengkap],
+                $tpl->isi_template
+            );
             $tplUrl = "https://wa.me/{$normalizedPhone}?text=" . urlencode($rendered);
         @endphp
         <li>

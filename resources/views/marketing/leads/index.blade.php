@@ -185,7 +185,10 @@ document.addEventListener('DOMContentLoaded', function() {
         'Warm': { bg: '#ffc107', color: '#000' },
         'Hot': { bg: '#dc3545', color: '#fff' },
         'Deal': { bg: '#198754', color: '#fff' },
+        'Tidak Respon': { bg: '#6f42c1', color: '#fff' },
+        'Tidak Berminat': { bg: '#343a40', color: '#fff' },
     };
+    const fallbackColor = { bg: '#6c757d', color: '#fff' };
 
     // Handle both table (.quick-status-item) and card (.card-quick-status) dropdowns
     document.querySelectorAll('.quick-status-item, .card-quick-status').forEach(function(item) {
@@ -210,9 +213,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const tableBtn = document.getElementById('status-btn-' + leadId);
                     if (tableBtn) {
                         const badge = tableBtn.querySelector('.badge');
+                        const c = statusColors[newStatus] || fallbackColor;
                         badge.textContent = newStatus;
-                        badge.style.backgroundColor = statusColors[newStatus].bg;
-                        badge.style.color = statusColors[newStatus].color;
+                        badge.style.backgroundColor = c.bg;
+                        badge.style.color = c.color;
                         tableBtn.closest('.dropdown').querySelectorAll('.dropdown-item').forEach(di => {
                             di.classList.remove('active');
                             if (di.dataset.status === newStatus) di.classList.add('active');
@@ -223,9 +227,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cardBtn = document.getElementById('card-status-btn-' + leadId);
                     if (cardBtn) {
                         const badge = cardBtn.querySelector('.badge');
+                        const c = statusColors[newStatus] || fallbackColor;
                         badge.textContent = newStatus;
-                        badge.style.backgroundColor = statusColors[newStatus].bg;
-                        badge.style.color = statusColors[newStatus].color;
+                        badge.style.backgroundColor = c.bg;
+                        badge.style.color = c.color;
                         cardBtn.closest('.dropdown').querySelectorAll('.dropdown-item').forEach(di => {
                             di.classList.remove('active');
                             if (di.dataset.status === newStatus) di.classList.add('active');

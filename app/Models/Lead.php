@@ -78,6 +78,11 @@ class Lead extends Model
     // Fungsi Baru untuk Badge Operan
     public function isTransferred(): bool
     {
+        // Pakai hasil eager-load (withCount) bila tersedia agar tidak memicu N+1
+        if (array_key_exists('transferred_histories_count', $this->attributes)) {
+            return (int) $this->attributes['transferred_histories_count'] > 0;
+        }
+
         return $this->histories()->where('action', 'transferred')->exists();
     }
 

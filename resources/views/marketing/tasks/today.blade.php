@@ -22,7 +22,7 @@
         <div class="col-6 col-md-4">
             <select name="status" class="form-select form-select-sm">
                 <option value="">Semua Status</option>
-                @foreach($statuses as $statusOption)
+                @foreach($filterStatuses as $statusOption)
                     <option value="{{ $statusOption->value }}" {{ $status === $statusOption->value ? 'selected' : '' }}>
                         {{ $statusOption->value }}
                     </option>
@@ -169,14 +169,24 @@
 </div>
 @endif
 @else
+@php $isFiltered = ($due !== 'all') || !empty($status); @endphp
 <div class="card">
     <div class="card-body text-center py-4">
-        <i class="bi bi-check-circle text-success fs-2 d-block mb-2"></i>
-        <h6>Tidak ada tugas follow-up hari ini</h6>
-        <p class="text-muted small">Semua follow-up sudah dikerjakan.</p>
-        <a href="{{ route('marketing.leads.index') }}" class="btn btn-sm" style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
-            <i class="bi bi-people"></i> Lihat Semua Leads
-        </a>
+        @if($isFiltered)
+            <i class="bi bi-funnel text-muted fs-2 d-block mb-2"></i>
+            <h6>Tidak ada tugas yang cocok dengan filter</h6>
+            <p class="text-muted small">Coba ubah atau reset filter di atas.</p>
+            <a href="{{ route('marketing.tasks.today') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Reset Filter
+            </a>
+        @else
+            <i class="bi bi-check-circle text-success fs-2 d-block mb-2"></i>
+            <h6>Tidak ada tugas follow-up hari ini</h6>
+            <p class="text-muted small">Semua follow-up sudah dikerjakan.</p>
+            <a href="{{ route('marketing.leads.index') }}" class="btn btn-sm" style="background-color: #0f3d2e; border-color: #0f3d2e; color: #fff;">
+                <i class="bi bi-people"></i> Lihat Semua Leads
+            </a>
+        @endif
     </div>
 </div>
 @endif

@@ -64,6 +64,38 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="sumber_lead" class="form-label">Sumber Lead</label>
+                        <input type="text"
+                               class="form-control @error('sumber_lead') is-invalid @enderror"
+                               id="sumber_lead"
+                               name="sumber_lead"
+                               value="{{ old('sumber_lead') }}"
+                               list="sumberLeadOptions"
+                               placeholder="Mis. Pameran, Referensi, Walk-in">
+                        <datalist id="sumberLeadOptions">
+                            <option value="Referensi">
+                            <option value="Pameran">
+                            <option value="Walk-in">
+                            <option value="Instagram">
+                            <option value="WhatsApp">
+                        </datalist>
+                        @error('sumber_lead')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="keterangan" class="form-label">Keterangan</label>
+                        <textarea class="form-control @error('keterangan') is-invalid @enderror"
+                                  id="keterangan"
+                                  name="keterangan"
+                                  rows="2">{{ old('keterangan') }}</textarea>
+                        @error('keterangan')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
                         <label for="catatan_terakhir" class="form-label">Catatan</label>
                         <textarea class="form-control @error('catatan_terakhir') is-invalid @enderror"
                                   id="catatan_terakhir"

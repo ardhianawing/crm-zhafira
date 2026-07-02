@@ -40,7 +40,8 @@ class DashboardController extends Controller
             ->get();
 
         // 4. Variabel Berita (Baris 160) - Harus 'recentNews'
-        $recentNews = News::latest()->limit(3)->get();
+        // Samakan dengan halaman berita: hanya yang published, urut tgl_post terbaru
+        $recentNews = News::published()->orderBy('tgl_post', 'desc')->limit(3)->get();
 
         // 5. Leads by Status (untuk breakdown card)
         $leadsByStatus = Lead::assignedTo($userId)

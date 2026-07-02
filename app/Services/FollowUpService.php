@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StatusProspek;
 use App\Models\Lead;
 use App\Models\LeadHistory;
 use Carbon\Carbon;
@@ -25,13 +26,22 @@ class FollowUpService
     {
         $oldValues = $lead->toArray();
 
+        $newStatus = $data['status_prospek'] ?? $lead->status_prospek;
+        $statusValue = $newStatus instanceof StatusProspek ? $newStatus->value : (string) $newStatus;
+
         $updateData = [
             'catatan_terakhir' => $data['catatan'] ?? $lead->catatan_terakhir,
-            'status_prospek' => $data['status_prospek'] ?? $lead->status_prospek,
+            'status_prospek' => $newStatus,
         ];
 
-        // Calculate next follow-up date based on fase
-        if ($lead->fase_followup < 3) {
+        // Lead yang ditutup (Deal / Tidak Berminat) tidak perlu dijadwalkan ulang
+        // atau dinaikkan fase-nya — siklus follow-up berhenti di sini.
+        $isClosed = in_array($statusValue, ['Deal', 'Tidak Berminat'], true);
+
+        if ($isClosed) {
+            $updateData['tgl_next_followup'] = null;
+        } elseif ($lead->fase_followup < 3) {
+            // Calculate next follow-up date based on fase
             $daysToAdd = self::CYCLE_DAYS[$lead->fase_followup] ?? 7;
             $updateData['tgl_next_followup'] = Carbon::today()->addDays($daysToAdd);
             $updateData['fase_followup'] = $lead->fase_followup + 1;

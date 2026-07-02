@@ -39,9 +39,17 @@ class FollowUpController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        // Semua status untuk dropdown "hasil follow-up" di tiap kartu
         $statuses = StatusProspek::cases();
 
-        return view('marketing.tasks.today', compact('leads', 'statuses', 'due', 'status'));
+        // Filter status di atas hanya menampilkan status yang mungkin ada di daftar tugas
+        // (activeFollowUps mengecualikan Deal & Tidak Berminat, jadi jangan ditawarkan)
+        $filterStatuses = array_values(array_filter(
+            $statuses,
+            fn (StatusProspek $s) => !in_array($s->value, ['Deal', 'Tidak Berminat'], true)
+        ));
+
+        return view('marketing.tasks.today', compact('leads', 'statuses', 'filterStatuses', 'due', 'status'));
     }
 
     public function complete(Request $request, Lead $lead)

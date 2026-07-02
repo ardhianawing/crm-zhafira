@@ -105,7 +105,7 @@
                                     @php $renderedTemplate = str_replace(['{nama_customer}', '{nama_marketing}'], [$lead->nama_customer, auth()->user()->nama_lengkap], $template->isi_template); @endphp
                                     <pre class="mb-2 p-2 bg-light rounded" style="white-space: pre-wrap; font-family: inherit; font-size: 0.78rem;" id="template-{{ $template->id }}">{{ $renderedTemplate }}</pre>
                                     <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0" onclick="copyTemplate({{ $template->id }})" style="font-size: 0.73rem;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0" id="copy-btn-{{ $template->id }}" onclick="copyTemplate({{ $template->id }})" style="font-size: 0.73rem;">
                                             <i class="bi bi-clipboard"></i> Copy
                                         </button>
                                         <x-whatsapp-button :phone="$lead->no_hp" :message="$renderedTemplate" class="btn-sm py-0" style="font-size: 0.73rem;">
@@ -202,8 +202,18 @@
 <script>
 function copyTemplate(templateId) {
     const text = document.getElementById('template-' + templateId).innerText;
+    const btn = document.getElementById('copy-btn-' + templateId);
     navigator.clipboard.writeText(text).then(() => {
-        alert('Template berhasil di-copy!');
+        if (!btn) return;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Tersalin';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-secondary');
+        setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 1500);
     });
 }
 </script>
